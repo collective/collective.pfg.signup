@@ -1,0 +1,22 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:five="http://namespaces.zope.org/five"
+    xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
+    i18n_domain="collective.pfg.signup">
+
+    <includeDependencies package="." />
+
+    <five:registerPackage package="." initialize=".initialize" />
+
+    <class class=".adapter.SignUpAdapter" />
+
+    <!-- Register the installation GenericSetup extension profile -->
+    <genericsetup:registerProfile
+        name="default"
+        title="Signup Adapter for PloneFormGen"
+        directory="profiles/default"
+        description="A PloneFormGen adapter that saves signup form"
+        provides="Products.GenericSetup.interfaces.EXTENSION"
+        />
+
+</configure>
