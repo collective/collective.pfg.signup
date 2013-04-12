@@ -40,6 +40,7 @@ setup(name='collective.pfg.signup',
           'setuptools',
           'Plone',
           'Products.PloneFormGen',
+          'pretaweb.plominolib'
       ],
       extras_require={
         'test': ['plone.app.testing'],

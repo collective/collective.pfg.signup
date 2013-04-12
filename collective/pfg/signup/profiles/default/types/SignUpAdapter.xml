@@ -13,9 +13,9 @@
   <property name="global_allow">False</property>
   <property name="filter_content_types">False</property>
   <property name="allow_discussion">False</property>
-  <property name="default_view">base_view</property>
-  <property name="view_methods">
-    <element value="base_view" />
+  <property name="default_view">user_approver_view</property>
+  <property name="view_methods" purge="False">
+    <element value="user_approver_view" />
   </property>
   <alias from="(Default)" to="(dynamic view)" />
   <alias from="edit" to="atct_edit" />

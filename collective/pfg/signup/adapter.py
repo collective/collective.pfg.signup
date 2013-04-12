@@ -15,6 +15,12 @@ from Products.CMFCore.utils import getToolByName
 from zope.app.component.hooks import getSite
 from zope.component import getUtility
 from Products.CMFCore.interfaces import ISiteRoot
+from BTrees.OOBTree import OOBTree
+from pretaweb.plominolib import encode, decode
+from smtplib import SMTPRecipientsRefused
+from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
+from email import message_from_string
+from email.Header import Header
 
 import logging
 
@@ -60,46 +66,28 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
                                       u'up form.'),
                       ),
                       ),
-    atapi.StringField('council_field',
-                      default='council',
-                      required=False,
-                      widget=atapi.StringWidget(
-                          label=_(u'label_council', default=u'Council Field'),
-                          description=_(u'help_council_field',
-                              default=u'Enter council field from the sign up '
-                                      u'form.'),
-                          ),
-                      ),
-    atapi.StringField('role_field',
-                      default='role',
-                      required=False,
-                      widget=atapi.StringWidget(
-                          label=_(u'label_role', default=u'Role Field'),
-                          description=_(u'help_role_field',
-                              default=u'Enter role field from the sign up '
-                                      u'form.'),
-                          ),
-                      ),
-    atapi.StringField('user_group',
-                      default='user-group',
+    atapi.StringField('user_group_template',
+                      default='${council}_council_${role}',
                       required=True,
                       widget=atapi.StringWidget(
-                          label=_(u'label_user_group',
-                              default=u'Add to User Group'),
-                          description=_(u'help_add_to_user_group',
-                              default=u'Enter user group name that users added '
-                                      u'to.'),
+                          label=_(u'label_user_group_template',
+                              default=u'Add to User Group Template'),
+                          description=_(u'help_add_to_user_group_template',
+                              default=u'Enter user group template that users '
+                                      u' added to, '
+                                      u'eg ${council}_council_${role}.'),
                       ),
                       ),
-    atapi.StringField('approval_group',
-                      default='approval-group',
+    atapi.StringField('approval_group_template',
+                      default='${council}_council_${role}_approver',
                       required=False,
                       widget=atapi.StringWidget(
-                          label=_(u'label_approval_group',
-                              default=u'Approval Group Field'),
-                          description=_(u'help_approval_group_field',
-                              default=u"Enter approval group field where group "
-                                      u"that need to approve this user group."),
+                          label=_(u'label_approval_group_template',
+                              default=u'Approval Group Template'),
+                          description=_(u'help_approval_group_template',
+                              default=u"Enter approval group template where "
+                                      u"group that need to approve this user, "
+                                      u"eg ${council}_${role}_approver."),
                       ),
                       ),
 ))
@@ -112,10 +100,32 @@ class SignUpAdapter(FormActionAdapter):
     meta_type = 'SignUpAdapter'
     portal_type = 'SignUpAdapter'
     archetype_name = 'SignUp Adapter'
+    default_view = 'user_approver_view'
     schema = SignUpAdapterSchema
     security = ClassSecurityInfo()
 
     security.declarePrivate('onSuccess')
+
+    def __init__(self, oid, **kwargs):
+        """ initialize class """
+
+        FormActionAdapter.__init__(self, oid, **kwargs)
+
+        self.site = getSite()
+        self.SECRET_KEY = 'o41vivy!f3!$v6hl5geg0p1o2xkvmjn9&*b)(ejc^2t]p4hmsq'
+        self.waiting_list = OOBTree()
+        self.waiting_by_approver = OOBTree()
+        self.registration = getToolByName(self.site, 'portal_registration')
+        self.portal_groups = getToolByName(self.site, 'portal_groups')
+        self.mail_host = getToolByName(self.site, 'MailHost')
+        portal_url = getToolByName(self.site, 'portal_url')
+        self.portal = portal_url.getPortalObject()
+        #self.approval_mail = ViewPageTemplateFile('templates/approval_mail.pt')
+
+    def generate_group(self, REQUEST, template):
+        print template
+        print REQUEST
+        return template
 
     def onSuccess(self, fields, REQUEST=None):
         """Save form input."""
@@ -124,10 +134,11 @@ class SignUpAdapter(FormActionAdapter):
         username = None
         email = None
         password = None
-        council = None
-        role = None
-        group = self.user_group
-        approval_group = self.approval_group
+
+        # e.g. self.approval_template will be like "${council}_${role}_approver"
+        approval_group = self.generate_group(REQUEST, self.approval_group_template)
+        user_group = self.generate_group(REQUEST, self.user_group_template)
+
         reset_password = False
 
         for field in fields:
@@ -141,15 +152,10 @@ class SignUpAdapter(FormActionAdapter):
                 email = val
             elif fname == self.password_field:
                 password = val
-            elif fname == self.council_field:
-                council = val
-            elif fname == self.role_field:
-                role = val
 
         #TODO should we verify the two passwords are the same again?
-        import ipdb; ipdb.set_trace()
 
-        if email is None or group == "":
+        if email is None or user_group == "":
             # SignUpAdapter did not setup properly
             return {FORM_ERROR_MARKER: 'Sign Up form is not setup properly.'}
 
@@ -157,19 +163,78 @@ class SignUpAdapter(FormActionAdapter):
             username = email
 
         if approval_group:
-            pass
+            #import ipdb; ipdb.set_trace()
+
+            #should use hash the same way as plone if want to store password
+            if password:
+                secret_password = encode(self.SECRET_KEY, password)
+            else:
+                secret_password = password
+
+            form_data = REQUEST.form
+
+            # just email is enough?
+            key = encode(self.SECRET_KEY, email)
+            record = {'fullname': fullname, 'username': username,
+                      'email': email, 'form_data': form_data,
+                      'password': secret_password}
+            self.waiting_list[key] = record
+            if approval_group not in self.waiting_by_approver:
+                self.waiting_by_approver[approval_group] = {}
+
+            self.waiting_by_approver[approval_group].update({key: record})
+
+            # find the email from group and send out the email
+
+            if not approval_group in self.portal_groups.getGroupIds():
+                self.portal_groups.addGroup(approval_group)
+                # TODO raise unkown 'new group' and no email
+            else:
+                group = self.portal_groups.getGroupById(approval_group)
+                group_email = group.getProperty('email')
+                if not group_email:
+                    # TODO raise no email error
+                    pass
+
+                # send out email
+                try:
+                    # TODO using mail template
+                    #mail_text = self.approval_mail(group_email=group_email,
+                    #                               fullname=fullname,
+                    #                               username=username,
+                    #                               email=email,
+                    #                               charset='utf-8',
+                    #                               # email_charset,
+                    #                               request=REQUEST)
+                    # The ``immediate`` parameter causes an email to be sent immediately
+                    # (if any error is raised) rather than sent at the transaction
+                    # boundary or queued for later delivery.
+                    mail_body = u"There is a user %s waiting for approval. " \
+                                u"Please approve at %s. " \
+                                u"Thank you." % (email, 'http://www.yahoo.com')
+                    mail_text = message_from_string(mail_body.encode('utf-8'))
+                    mail_text.set_charset('utf-8')
+                    mail_text['X-Custom'] = Header(u'Some Custom Parameter', 'utf-8')
+                    self.mail_host.send(
+                        mail_text, mto=group_email,
+                        mfrom=self.portal.getProperty('email_from_address'),
+                        subject='Approval Email', immediate=True)
+                except SMTPRecipientsRefused:
+                    # Don't disclose email address on failure
+                    raise SMTPRecipientsRefused(
+                        'Recipient address rejected by server')
+
         else:
             # auto registration
 
             # username validation
-            site = getSite()
-            registration = getToolByName(site, 'portal_registration')
-            if username == site.getId():
+
+            if username == self.site.getId():
                 return {FORM_ERROR_MARKER: 'You will need to signup again.',
                         'username': _(u"This username is reserved. "
                                       u"Please choose a different name.")}
 
-            if not registration.isMemberIdAllowed(username):
+            if not self.registration.isMemberIdAllowed(username):
                 return {FORM_ERROR_MARKER: 'You will need to signup again.',
                         'username': _(u"The login name you selected is already "
                                       u"in use or is not valid. "
@@ -177,7 +242,7 @@ class SignUpAdapter(FormActionAdapter):
 
             if password:
 
-                failMessage = registration.testPasswordValidity(password)
+                failMessage = self.registration.testPasswordValidity(password)
                 if failMessage is not None:
                     return {FORM_ERROR_MARKER: 'You will need to signup again.',
                             'password': failMessage}
@@ -194,27 +259,27 @@ class SignUpAdapter(FormActionAdapter):
             else:
                 # generate random string and
                 # set send out reset password email flag
-                password = registration.generatePassword()
+                password = self.registration.generatePassword()
                 reset_password = True
 
-            portal_groups = getToolByName(site, 'portal_groups')
-            if not group in portal_groups.getGroupIds():
-                portal_groups.addGroup(group)
+            if not user_group in self.portal_groups.getGroupIds():
+                self.portal_groups.addGroup(user_group)
 
             try:
-                member = registration.addMember(
+                member = self.registration.addMember(
                     username, password,
                     properties={'username': username,
                                 'email': email})
                 #groups = portal_groups.getGroupsByUserId(member.getUserName())
-                portal_groups.addPrincipalToGroup(member.getUserName(), group)
+                self.portal_groups.addPrincipalToGroup(member.getUserName(),
+                                                  user_group)
                 if member.has_role('Member'):
-                    site.acl_users.portal_role_manager.removeRoleFromPrincipal(
+                    self.site.acl_users.portal_role_manager.removeRoleFromPrincipal(
                         'Member', member.getUserName())
 
                 if reset_password:
                     # send out reset password email
-                    registration.mailPassword(username, REQUEST)
+                    self.registration.mailPassword(username, REQUEST)
 
             except(AttributeError, ValueError), err:
                 logging.exception(err)

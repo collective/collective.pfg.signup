@@ -1,6 +1,7 @@
 <configure
     xmlns="http://namespaces.zope.org/zope"
     xmlns:five="http://namespaces.zope.org/five"
+    xmlns:browser="http://namespaces.zope.org/browser"
     xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
     i18n_domain="collective.pfg.signup">
 
@@ -17,6 +18,13 @@
         directory="profiles/default"
         description="A PloneFormGen adapter that saves signup form"
         provides="Products.GenericSetup.interfaces.EXTENSION"
+        />
+
+    <browser:page
+        for=".interfaces.ISignUpAdapter"
+        name="user_approver_view"
+        class=".views.UserApproverView"
+        permission="zope2.View"
         />
 
 </configure>
