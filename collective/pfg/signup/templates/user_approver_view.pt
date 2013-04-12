@@ -6,10 +6,55 @@
       metal:use-macro="context/main_template/macros/master"
       i18n:domain="collective.pfg.signup">
 
+    <metal:javascript_head metal:fill-slot="javascript_head_slot">
+        <link rel="stylesheet" type="text/css" media="screen" href="http://ajax.aspnetcdn.com/ajax/jquery.dataTables/1.9.4/css/jquery.dataTables.css" />
+        <link rel="stylesheet" type="text/css" media="screen" href="http://ajax.aspnetcdn.com/ajax/jquery.dataTables/1.9.4/css/jquery.dataTables_themeroller.css" />
+        <script type="text/javascript" src="http://ajax.aspnetcdn.com/ajax/jquery.dataTables/1.9.4/jquery.dataTables.js"></script>
+        <script type="text/javascript"
+                tal:define="aaData python:view.result_data();
+                            aoColumns python:view.result_columns();"
+                tal:content="structure string:
+            if (typeof jQuery !== 'undefined') {
+
+                jQuery(function($) {
+                    var oTable;
+
+                    $('#dynamicForm').submit( function() {
+		                var sData = oTable.$('input').serialize();
+		                alert('The following data would have been submitted to the server: \n\n'+sData );
+                        return false;
+                    });
+
+                    /* Data set - can contain whatever information you want */
+                    oTable = $('#example').dataTable( {
+                    'aaData': ${aaData},
+                    'aoColumns' : ${aoColumns}
+                    } );
+
+                });
+            }">
+        </script>
+    </metal:javascript_head>
+
     <body >
 
-        <metal:core fill-slot="content-core">
-            <p>Help Me!</p>
+        <metal:core fill-slot="content-core"
+                    tal:define="form python:view.context">
+            <div class="message">
+                <p class="results" tal:content="view/results">Results</p>
+            </div>
+            <div id="dynamic">
+                <form id="dynamicForm">
+                <div style="text-align:right; padding-bottom:1em;">
+                    <button type="submit">Submit form</button>
+                </div>
+                <table cellpadding="0"
+                       cellspacing="0"
+                       border="0" class="display" id="example">
+
+                       </table>
+                </form>
+            </div>
         </metal:core>
     </body>
 </html>

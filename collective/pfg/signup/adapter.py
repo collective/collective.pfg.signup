@@ -120,11 +120,12 @@ class SignUpAdapter(FormActionAdapter):
         self.mail_host = getToolByName(self.site, 'MailHost')
         portal_url = getToolByName(self.site, 'portal_url')
         self.portal = portal_url.getPortalObject()
+        self.excluded_field = ['form_submit', 'fieldset', 'last_referer',
+                               'add_reference', '_authenticator', 'password']
         #self.approval_mail = ViewPageTemplateFile('templates/approval_mail.pt')
 
     def generate_group(self, REQUEST, template):
         print template
-        print REQUEST
         return template
 
     def onSuccess(self, fields, REQUEST=None):
@@ -171,18 +172,28 @@ class SignUpAdapter(FormActionAdapter):
             else:
                 secret_password = password
 
-            form_data = REQUEST.form
-
             # just email is enough?
             key = encode(self.SECRET_KEY, email)
+
+            full_form_data = REQUEST.form
+            form_column = ['key_id']
+            form_data = [key]
+
+            for key, value in full_form_data.items():
+                if key not in self.excluded_field:
+                    form_column.append(key)
+                    form_data.append(value)
+
             record = {'fullname': fullname, 'username': username,
-                      'email': email, 'form_data': form_data,
+                      'email': email, 'full_form_data': full_form_data,
+                      'form_column': form_column, 'form_data': form_data,
                       'password': secret_password}
             self.waiting_list[key] = record
             if approval_group not in self.waiting_by_approver:
                 self.waiting_by_approver[approval_group] = {}
 
             self.waiting_by_approver[approval_group].update({key: record})
+            print "%s: %s" % (key, record)
 
             # find the email from group and send out the email
 
