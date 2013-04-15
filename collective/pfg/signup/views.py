@@ -92,6 +92,7 @@ class UserApproverView(BrowserView):
                 if user_group_name not in waiting_by_approver:
                     continue
 
+                #import ipdb; ipdb.set_trace()
                 self.results.update(waiting_by_approver[user_group_name])
 
             is_first_item = True
@@ -102,7 +103,7 @@ class UserApproverView(BrowserView):
 
                 if is_first_item:
                     for column in form_column:
-                        self.field_column.append({ "sTitle": column })
+                        self.field_column.append({"sTitle": column})
                     is_first_item = False
 
                 self.field_data.append(form_data)

@@ -16,11 +16,12 @@ from zope.app.component.hooks import getSite
 from zope.component import getUtility
 from Products.CMFCore.interfaces import ISiteRoot
 from BTrees.OOBTree import OOBTree
-from pretaweb.plominolib import encode, decode
+from encrypt import encode
 from smtplib import SMTPRecipientsRefused
 from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
 from email import message_from_string
 from email.Header import Header
+import hashlib
 
 import logging
 
@@ -121,7 +122,8 @@ class SignUpAdapter(FormActionAdapter):
         portal_url = getToolByName(self.site, 'portal_url')
         self.portal = portal_url.getPortalObject()
         self.excluded_field = ['form_submit', 'fieldset', 'last_referer',
-                               'add_reference', '_authenticator', 'password']
+                               'add_reference', 'form.submitted',
+                               '_authenticator', 'password']
         #self.approval_mail = ViewPageTemplateFile('templates/approval_mail.pt')
 
     def generate_group(self, REQUEST, template):
@@ -173,11 +175,16 @@ class SignUpAdapter(FormActionAdapter):
                 secret_password = password
 
             # just email is enough?
-            key = encode(self.SECRET_KEY, email)
+            key_id = encode(self.SECRET_KEY, email)
+            key_hash = hashlib.sha224(key_id).hexdigest()
 
             full_form_data = REQUEST.form
-            form_column = ['key_id']
-            form_data = [key]
+            #form_column = ['key_id']
+            #form_data = [key_id]
+            form_column = ["approve"]
+            approve_string = "<input type='checkbox' name='{0}' value='1' />".\
+                format(key_hash)
+            form_data = [approve_string]
 
             for key, value in full_form_data.items():
                 if key not in self.excluded_field:
@@ -187,13 +194,15 @@ class SignUpAdapter(FormActionAdapter):
             record = {'fullname': fullname, 'username': username,
                       'email': email, 'full_form_data': full_form_data,
                       'form_column': form_column, 'form_data': form_data,
-                      'password': secret_password}
-            self.waiting_list[key] = record
+                      'password': secret_password, 'key_hash': key_hash}
+            self.waiting_list[key_hash] = key_id
             if approval_group not in self.waiting_by_approver:
                 self.waiting_by_approver[approval_group] = {}
 
-            self.waiting_by_approver[approval_group].update({key: record})
-            print "%s: %s" % (key, record)
+            self.waiting_by_approver[approval_group].update({key_id: record})
+            print "%s: %s" % (key_id, record)
+
+            #import ipdb; ipdb.set_trace()
 
             # find the email from group and send out the email
 
@@ -283,10 +292,11 @@ class SignUpAdapter(FormActionAdapter):
                                 'email': email})
                 #groups = portal_groups.getGroupsByUserId(member.getUserName())
                 self.portal_groups.addPrincipalToGroup(member.getUserName(),
-                                                  user_group)
+                                                       user_group)
                 if member.has_role('Member'):
-                    self.site.acl_users.portal_role_manager.removeRoleFromPrincipal(
-                        'Member', member.getUserName())
+                    self.site.acl_users.portal_role_manager.\
+                        removeRoleFromPrincipal(
+                            'Member', member.getUserName())
 
                 if reset_password:
                     # send out reset password email
