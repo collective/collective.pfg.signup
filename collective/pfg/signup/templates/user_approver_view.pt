@@ -12,7 +12,8 @@
         <script type="text/javascript" src="http://ajax.aspnetcdn.com/ajax/jquery.dataTables/1.9.4/jquery.dataTables.js"></script>
         <script type="text/javascript"
                 tal:define="aaData python:view.result_data();
-                            aoColumns python:view.result_columns();"
+                            aoColumns python:view.result_columns();
+                            thisUrl python:view.context.absolute_url();"
                 tal:content="structure string:
             if (typeof jQuery !== 'undefined') {
 
@@ -22,6 +23,10 @@
                     $('#dynamicForm').submit( function() {
 		                var sData = oTable.$('input').serialize();
 		                alert('The following data would have been submitted to the server: \n\n'+sData );
+		                $.post('${thisUrl}/user_management_view', {
+		                    results: sData
+		                });
+		                window.location.href = '${thisUrl}';
                         return false;
                     });
 

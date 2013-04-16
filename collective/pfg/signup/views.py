@@ -3,6 +3,9 @@ from Products.Five import BrowserView
 from zope.interface import implements
 from zope.component import getMultiAdapter
 from Products.CMFCore.utils import getToolByName
+from adapter import create_member, validate_password
+import hashlib
+
 
 class UserApproverView(BrowserView):
     index = ViewPageTemplateFile("templates/user_approver_view.pt")
@@ -121,5 +124,92 @@ class UserApproverView(BrowserView):
             # - send out email to user for reject?
             # - Create user and send out reset password email for approval.
             # clear the data from the OOBTree.
+
+        return self.index()
+
+
+class UserManagementView(BrowserView):
+    index = ViewPageTemplateFile("templates/user_management_view.pt")
+
+    def __init__(self, context, request):
+        super(UserManagementView, self).__init__(context, request)
+        print "UserManagementView: init"
+
+    def __call__(self):
+        # aq_inner is needed in some cases like in the portlet renderers
+        # where the context itself is a portlet renderer and it's not on the
+        # acquisition chain leading to the portal root.
+        # If you are unsure what this means always use context.aq_inner
+        print "UserManagementView: call"
+        context = self.context.aq_inner
+        portal_membership = getToolByName(context, 'portal_membership')
+        waiting_by_approver = context.waiting_by_approver
+        waiting_list = context.waiting_list
+
+        if portal_membership.isAnonymousUser():
+            # Return target URL for the site anonymous visitors
+            # TODO return error??
+            return self.index()
+
+        if 'results' not in self.request:
+            # TODO return error??
+            return self.index()
+
+        results_string = self.request['results']
+        results = []
+        for result in results_string.split('&'):
+            key_hash, _ = result.split("=")
+            if key_hash not in waiting_list:
+                continue
+
+            key_id = waiting_list[key_hash]
+
+            # need to verified?
+            key_hash_original = hashlib.sha224(key_id).hexdigest()
+
+            if key_hash_original != key_hash:
+                # TODO raise error?
+                continue
+
+            del context.waiting_list[key_hash]
+            results.append(key_id)
+
+        user_id = portal_membership.getAuthenticatedMember().getId()
+        portal_groups = getToolByName(context, 'portal_groups')
+        user_groups = portal_groups.getGroupsByUserId(user_id)
+
+        # get the user approval list based on groups
+        for user_group in user_groups:
+            user_group_name = user_group.getName()
+            if user_group_name not in waiting_by_approver:
+                continue
+
+            all_results = waiting_by_approver[user_group_name]
+
+
+            for key in results:
+
+                # TODO remove the waiting_list
+                if key not in all_results:
+                    continue
+
+                this_result = all_results[key]
+
+                username = this_result['username']
+                password = this_result['password']
+                email = this_result['email']
+                user_group = this_result['user_group']
+
+                verified = validate_password(password)
+
+                if verified['fail_message']:
+                    return verified['fail_message']
+
+                # create an account:
+                create_member(self.request, username, verified['password'],
+                              email, verified['reset_password'],
+                              user_group)
+
+                del waiting_by_approver[user_group_name][key]
 
         return self.index()

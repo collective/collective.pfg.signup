@@ -68,7 +68,7 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
                       ),
                       ),
     atapi.StringField('user_group_template',
-                      default='${council}_council_${role}',
+                      default='council_role',
                       required=True,
                       widget=atapi.StringWidget(
                           label=_(u'label_user_group_template',
@@ -80,7 +80,7 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
                       ),
                       ),
     atapi.StringField('approval_group_template',
-                      default='${council}_council_${role}_approver',
+                      default='council_role_approver',
                       required=False,
                       widget=atapi.StringWidget(
                           label=_(u'label_approval_group_template',
@@ -142,8 +142,6 @@ class SignUpAdapter(FormActionAdapter):
         approval_group = self.generate_group(REQUEST, self.approval_group_template)
         user_group = self.generate_group(REQUEST, self.user_group_template)
 
-        reset_password = False
-
         for field in fields:
             fname = field.fgField.getName()
             val = REQUEST.form.get(fname, None)
@@ -194,7 +192,9 @@ class SignUpAdapter(FormActionAdapter):
             record = {'fullname': fullname, 'username': username,
                       'email': email, 'full_form_data': full_form_data,
                       'form_column': form_column, 'form_data': form_data,
-                      'password': secret_password, 'key_hash': key_hash}
+                      'password': secret_password, 'key_hash': key_hash,
+                      'user_group': user_group,
+                      'approval_group': approval_group}
             self.waiting_list[key_hash] = key_id
             if approval_group not in self.waiting_by_approver:
                 self.waiting_by_approver[approval_group] = {}
@@ -260,53 +260,84 @@ class SignUpAdapter(FormActionAdapter):
                                       u"in use or is not valid. "
                                       u"Please choose another.")}
 
-            if password:
+            verified = validate_password(password)
 
-                failMessage = self.registration.testPasswordValidity(password)
-                if failMessage is not None:
-                    return {FORM_ERROR_MARKER: 'You will need to signup again.',
-                            'password': failMessage}
-
-                # do the registration
-                #TODO should based on turn on self-registration flag?
-                #refer to plone.app.users/browser/register.py
-                # data = {'username': 'user3', 'fullname': u'User3',
-                # 'password': u'qwert', 'email': 'user3@mail.com',
-                # 'password_ctl': u'qwert'}
-                if isinstance(password, unicode):
-                    password = password.encode('utf8')
-
-            else:
-                # generate random string and
-                # set send out reset password email flag
-                password = self.registration.generatePassword()
-                reset_password = True
+            if verified['fail_message']:
+                return verified['fail_message']
 
             if not user_group in self.portal_groups.getGroupIds():
                 self.portal_groups.addGroup(user_group)
 
-            try:
-                member = self.registration.addMember(
-                    username, password,
-                    properties={'username': username,
-                                'email': email})
-                #groups = portal_groups.getGroupsByUserId(member.getUserName())
-                self.portal_groups.addPrincipalToGroup(member.getUserName(),
-                                                       user_group)
-                if member.has_role('Member'):
-                    self.site.acl_users.portal_role_manager.\
-                        removeRoleFromPrincipal(
-                            'Member', member.getUserName())
-
-                if reset_password:
-                    # send out reset password email
-                    self.registration.mailPassword(username, REQUEST)
-
-            except(AttributeError, ValueError), err:
-                logging.exception(err)
-                IStatusMessage(self.request).addStatusMessage(err, type="error")
-                return
+            create_member(REQUEST, username, verified['password'], email,
+                          verified['reset_password'], user_group)
 
         return
+
+
+def create_member(request, username, password, email, reset_password,
+                  user_group):
+    site = getSite()
+    portal_membership = getToolByName(site, 'portal_membership')
+    portal_registration = getToolByName(site, 'portal_registration')
+    portal_groups = getToolByName(site, 'portal_groups')
+
+    try:
+        member = portal_membership.getMemberById(username)
+
+        if member is None:
+            member = portal_registration.addMember(
+                username, password,
+                properties={'username': username,
+                            'email': email})
+
+        if not user_group in portal_groups.getGroupIds():
+            portal_groups.addGroup(user_group)
+
+        portal_groups.addPrincipalToGroup(member.getUserName(),
+                                          user_group)
+
+        if member.has_role('Member'):
+            site.acl_users.portal_role_manager.removeRoleFromPrincipal(
+                'Member', member.getUserName())
+
+        if reset_password:
+            # send out reset password email
+            portal_registration.mailPassword(username, request)
+
+    except(AttributeError, ValueError), err:
+        logging.exception(err)
+        IStatusMessage(request).addStatusMessage(err, type="error")
+        return
+
+def validate_password(password):
+    site = getSite()
+    registration = getToolByName(site, 'portal_registration')
+    reset_password = False
+    fail_message = None
+
+    if password:
+        failMessage = registration.testPasswordValidity(password)
+        if failMessage is not None:
+            fail_message = {FORM_ERROR_MARKER: 'You will need to signup again.',
+                            'password': failMessage}
+
+        # do the registration
+        #TODO should based on turn on self-registration flag?
+        #refer to plone.app.users/browser/register.py
+        # data = {'username': 'user3', 'fullname': u'User3',
+        # 'password': u'qwert', 'email': 'user3@mail.com',
+        # 'password_ctl': u'qwert'}
+        if isinstance(password, unicode):
+            password = password.encode('utf8')
+
+    else:
+        # generate random string and
+        # set send out reset password email flag
+        password = registration.generatePassword()
+        reset_password = True
+
+    return {'password': password, 'reset_password': reset_password,
+            'fail_message': fail_message}
+
 
 registerATCT(SignUpAdapter, PROJECTNAME)

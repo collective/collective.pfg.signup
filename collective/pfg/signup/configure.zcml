@@ -27,4 +27,11 @@
         permission="zope2.View"
         />
 
+    <browser:page
+        for=".interfaces.ISignUpAdapter"
+        name="user_management_view"
+        class=".views.UserManagementView"
+        permission="zope2.View"
+        />
+
 </configure>
