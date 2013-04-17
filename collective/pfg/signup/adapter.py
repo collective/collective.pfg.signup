@@ -200,12 +200,9 @@ class SignUpAdapter(FormActionAdapter):
                 self.waiting_by_approver[approval_group] = {}
 
             self.waiting_by_approver[approval_group].update({key_id: record})
-            print "%s: %s" % (key_id, record)
-
-            #import ipdb; ipdb.set_trace()
+            #print "%s: %s" % (key_id, record)
 
             # find the email from group and send out the email
-
             if not approval_group in self.portal_groups.getGroupIds():
                 self.portal_groups.addGroup(approval_group)
                 # TODO raise unkown 'new group' and no email
@@ -231,10 +228,12 @@ class SignUpAdapter(FormActionAdapter):
                     # boundary or queued for later delivery.
                     mail_body = u"There is a user %s waiting for approval. " \
                                 u"Please approve at %s. " \
-                                u"Thank you." % (email, 'http://www.yahoo.com')
+                                u"Thank you." % (email, REQUEST['ACTUAL_URL'] +
+                                '/' + self.getRawId())
                     mail_text = message_from_string(mail_body.encode('utf-8'))
                     mail_text.set_charset('utf-8')
-                    mail_text['X-Custom'] = Header(u'Some Custom Parameter', 'utf-8')
+                    mail_text['X-Custom'] = Header(u'Some Custom Parameter',
+                                                   'utf-8')
                     self.mail_host.send(
                         mail_text, mto=group_email,
                         mfrom=self.portal.getProperty('email_from_address'),

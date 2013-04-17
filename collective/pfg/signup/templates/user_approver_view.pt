@@ -30,6 +30,7 @@
                         return false;
                     });
 
+
                     /* Data set - can contain whatever information you want */
                     oTable = $('#example').dataTable( {
                     'aaData': ${aaData},

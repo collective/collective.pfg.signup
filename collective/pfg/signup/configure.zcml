@@ -24,14 +24,14 @@
         for=".interfaces.ISignUpAdapter"
         name="user_approver_view"
         class=".views.UserApproverView"
-        permission="zope2.View"
+        permission="cmf.ModifyPortalContent"
         />
 
     <browser:page
         for=".interfaces.ISignUpAdapter"
         name="user_management_view"
         class=".views.UserManagementView"
-        permission="zope2.View"
+        permission="cmf.ModifyPortalContent"
         />
 
 </configure>

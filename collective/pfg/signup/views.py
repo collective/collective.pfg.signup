@@ -69,61 +69,51 @@ class UserApproverView(BrowserView):
         # acquisition chain leading to the portal root.
         # If you are unsure what this means always use context.aq_inner
         print "UserApproverView: call"
+        login = 'login'
         context = self.context.aq_inner
         portal_membership = getToolByName(context, 'portal_membership')
+        self.results = {}
+        self.field_data = []
+        self.field_column = []
 
         if portal_membership.isAnonymousUser():
             # Return target URL for the site anonymous visitors
-            # TODO show nothing
-            pass
-        else:
-            user_id = portal_membership.getAuthenticatedMember().getId()
-            portal_groups = getToolByName(context, 'portal_groups')
-            user_groups = portal_groups.getGroupsByUserId(user_id)
+            return context.restrictedTraverse('login')()
+
+        user_id = portal_membership.getAuthenticatedMember().getId()
+        portal_groups = getToolByName(context, 'portal_groups')
+        user_groups = portal_groups.getGroupsByUserId(user_id)
+
+        #import ipdb; ipdb.set_trace()
+
+        waiting_by_approver = context.waiting_by_approver
+
+        # get the user approval list based on groups
+        for user_group in user_groups:
+            user_group_name = user_group.getName()
+            if user_group_name not in waiting_by_approver:
+                continue
 
             #import ipdb; ipdb.set_trace()
+            self.results.update(waiting_by_approver[user_group_name])
 
-            waiting_by_approver = context.waiting_by_approver
+        is_first_item = True
+        for _, fields in self.results.items():
 
-            self.results = {}
-            self.field_data = []
-            self.field_column = []
+            form_data = fields['form_data']
+            form_column = fields['form_column']
 
-            # get the user approval list based on groups
-            for user_group in user_groups:
-                user_group_name = user_group.getName()
-                if user_group_name not in waiting_by_approver:
-                    continue
+            if is_first_item:
+                for column in form_column:
+                    self.field_column.append({"sTitle": column})
+                is_first_item = False
 
-                #import ipdb; ipdb.set_trace()
-                self.results.update(waiting_by_approver[user_group_name])
+            self.field_data.append(form_data)
 
-            is_first_item = True
-            for _, fields in self.results.items():
-
-                form_data = fields['form_data']
-                form_column = fields['form_column']
-
-                if is_first_item:
-                    for column in form_column:
-                        self.field_column.append({"sTitle": column})
-                    is_first_item = False
-
-                self.field_data.append(form_data)
-
-
-
-
-
-
-
-
-
-
-            # after user click the form button:
-            # - send out email to user for reject?
-            # - Create user and send out reset password email for approval.
-            # clear the data from the OOBTree.
+        # after user click the form button:
+        # - send out email to user for reject?
+        # - Create user and send out reset password email for approval.
+        # clear the data from the OOBTree.
 
         return self.index()
 
