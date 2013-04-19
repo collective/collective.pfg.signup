@@ -204,8 +204,42 @@ class SignUpAdapter(FormActionAdapter):
 
             # find the email from group and send out the email
             if not approval_group in self.portal_groups.getGroupIds():
-                self.portal_groups.addGroup(approval_group)
-                # TODO raise unkown 'new group' and no email
+                #self.portal_groups.addGroup(approval_group)
+                # TODO raise unkown 'new group' and no email, should not happen
+                administrators = self.portal_groups.getGroupById('Administrators')
+                administrators_email = administrators.getProperty('email')
+                if not administrators_email:
+                    # TODO raise no email error
+                    pass
+
+                # send out email
+                try:
+                    # TODO using mail template
+                    #mail_text = self.approval_mail(group_email=group_email,
+                    #                               fullname=fullname,
+                    #                               username=username,
+                    #                               email=email,
+                    #                               charset='utf-8',
+                    #                               # email_charset,
+                    #                               request=REQUEST)
+                    # The ``immediate`` parameter causes an email to be sent immediately
+                    # (if any error is raised) rather than sent at the transaction
+                    # boundary or queued for later delivery.
+                    mail_body = u"There is a new group called %s waiting to" \
+                                u" create. " % approval_group
+                    mail_text = message_from_string(mail_body.encode('utf-8'))
+                    mail_text.set_charset('utf-8')
+                    mail_text['X-Custom'] = Header(u'Some Custom Parameter',
+                                                   'utf-8')
+                    self.mail_host.send(
+                        mail_text, mto=administrators_email,
+                        mfrom=self.portal.getProperty('email_from_address'),
+                        subject='New Group Email', immediate=True)
+                except SMTPRecipientsRefused:
+                    # Don't disclose email address on failure
+                    raise SMTPRecipientsRefused(
+                        'Recipient address rejected by server')
+
             else:
                 group = self.portal_groups.getGroupById(approval_group)
                 group_email = group.getProperty('email')
@@ -227,7 +261,7 @@ class SignUpAdapter(FormActionAdapter):
                     # (if any error is raised) rather than sent at the transaction
                     # boundary or queued for later delivery.
                     mail_body = u"There is a user %s waiting for approval. " \
-                                u"Please approve at %s. " \
+                                u"Please approve at %s . " \
                                 u"Thank you." % (email, REQUEST['ACTUAL_URL'] +
                                 '/' + self.getRawId())
                     mail_text = message_from_string(mail_body.encode('utf-8'))
