@@ -127,6 +127,10 @@ class SignUpAdapter(FormActionAdapter):
         #self.approval_mail = ViewPageTemplateFile('templates/approval_mail.pt')
 
     def generate_group(self, REQUEST, template):
+        # TODO Create generate council role group function
+        # e.g. self.approval_template will be like "${council}_${role}_approver"
+        # replace ${council} with council form field,
+        # replace ${role} with role form field from the Plone form gen
         print template
         return template
 
@@ -138,7 +142,6 @@ class SignUpAdapter(FormActionAdapter):
         email = None
         password = None
 
-        # e.g. self.approval_template will be like "${council}_${role}_approver"
         approval_group = self.generate_group(REQUEST, self.approval_group_template)
         user_group = self.generate_group(REQUEST, self.user_group_template)
 
@@ -154,7 +157,7 @@ class SignUpAdapter(FormActionAdapter):
             elif fname == self.password_field:
                 password = val
 
-        #TODO should we verify the two passwords are the same again?
+        # should we verify the two passwords are the same again?
 
         if email is None or user_group == "":
             # SignUpAdapter did not setup properly
@@ -164,8 +167,6 @@ class SignUpAdapter(FormActionAdapter):
             username = email
 
         if approval_group:
-            #import ipdb; ipdb.set_trace()
-
             #should use hash the same way as plone if want to store password
             if password:
                 secret_password = encode(self.SECRET_KEY, password)
@@ -202,29 +203,37 @@ class SignUpAdapter(FormActionAdapter):
             self.waiting_by_approver[approval_group].update({key_id: record})
             #print "%s: %s" % (key_id, record)
 
+            administrators = self.portal_groups.getGroupById('Administrators')
+            administrators_email = administrators.getProperty('email')
+            if not administrators_email:
+                administrators_email = self.portal.getProperty(
+                    'email_from_address')
+
+            if approval_group:
+                try:
+                    # TODO Create waiting list email template
+                    mail_body = u"Your account is waiting for approval. " \
+                                u"Thank you. "
+                    mail_text = message_from_string(mail_body.encode('utf-8'))
+                    mail_text.set_charset('utf-8')
+                    mail_text['X-Custom'] = Header(u'Some Custom Parameter',
+                                                   'utf-8')
+                    self.mail_host.send(
+                        mail_text, mto=email,
+                        mfrom=self.portal.getProperty('email_from_address'),
+                        subject='Waiting for approval', immediate=True)
+                except SMTPRecipientsRefused:
+                    # Don't disclose email address on failure
+                    raise SMTPRecipientsRefused(
+                        'Recipient address rejected by server')
+                return
+
             # find the email from group and send out the email
             if not approval_group in self.portal_groups.getGroupIds():
                 #self.portal_groups.addGroup(approval_group)
-                # TODO raise unkown 'new group' and no email, should not happen
-                administrators = self.portal_groups.getGroupById('Administrators')
-                administrators_email = administrators.getProperty('email')
-                if not administrators_email:
-                    # TODO raise no email error
-                    pass
-
-                # send out email
+                # Raise unknown 'new group' and no email, should not happen
                 try:
-                    # TODO using mail template
-                    #mail_text = self.approval_mail(group_email=group_email,
-                    #                               fullname=fullname,
-                    #                               username=username,
-                    #                               email=email,
-                    #                               charset='utf-8',
-                    #                               # email_charset,
-                    #                               request=REQUEST)
-                    # The ``immediate`` parameter causes an email to be sent immediately
-                    # (if any error is raised) rather than sent at the transaction
-                    # boundary or queued for later delivery.
+                    # TODO Create no existing group email template
                     mail_body = u"There is a new group called %s waiting to" \
                                 u" create. " % approval_group
                     mail_text = message_from_string(mail_body.encode('utf-8'))
@@ -239,70 +248,73 @@ class SignUpAdapter(FormActionAdapter):
                     # Don't disclose email address on failure
                     raise SMTPRecipientsRefused(
                         'Recipient address rejected by server')
+                return
 
-            else:
-                group = self.portal_groups.getGroupById(approval_group)
-                group_email = group.getProperty('email')
-                if not group_email:
-                    # TODO raise no email error
-                    pass
-
-                # send out email
+            # else
+            group = self.portal_groups.getGroupById(approval_group)
+            group_email = group.getProperty('email')
+            if not group_email:
+                # TODO Create no approval group email template
                 try:
-                    # TODO using mail template
-                    #mail_text = self.approval_mail(group_email=group_email,
-                    #                               fullname=fullname,
-                    #                               username=username,
-                    #                               email=email,
-                    #                               charset='utf-8',
-                    #                               # email_charset,
-                    #                               request=REQUEST)
-                    # The ``immediate`` parameter causes an email to be sent immediately
-                    # (if any error is raised) rather than sent at the transaction
-                    # boundary or queued for later delivery.
-                    mail_body = u"There is a user %s waiting for approval. " \
-                                u"Please approve at %s . " \
-                                u"Thank you." % (email, REQUEST['ACTUAL_URL'] +
-                                '/' + self.getRawId())
+                    mail_body = u"There is a user group %s does not have " \
+                                u"email. Thank you." % approval_group
                     mail_text = message_from_string(mail_body.encode('utf-8'))
                     mail_text.set_charset('utf-8')
                     mail_text['X-Custom'] = Header(u'Some Custom Parameter',
                                                    'utf-8')
                     self.mail_host.send(
-                        mail_text, mto=group_email,
+                        mail_text, mto=administrators_email,
                         mfrom=self.portal.getProperty('email_from_address'),
                         subject='Approval Email', immediate=True)
                 except SMTPRecipientsRefused:
                     # Don't disclose email address on failure
                     raise SMTPRecipientsRefused(
                         'Recipient address rejected by server')
+                return
 
-        else:
-            # auto registration
+            try:
+                # TODO Create approval email template
+                mail_body = u"There is a user %s waiting for approval. " \
+                            u"Please approve at %s . " \
+                            u"Thank you." % (email, REQUEST['ACTUAL_URL'] +
+                            '/' + self.getRawId())
+                mail_text = message_from_string(mail_body.encode('utf-8'))
+                mail_text.set_charset('utf-8')
+                mail_text['X-Custom'] = Header(u'Some Custom Parameter',
+                                               'utf-8')
+                self.mail_host.send(
+                    mail_text, mto=group_email,
+                    mfrom=self.portal.getProperty('email_from_address'),
+                    subject='Approval Email', immediate=True)
+            except SMTPRecipientsRefused:
+                # Don't disclose email address on failure
+                raise SMTPRecipientsRefused(
+                    'Recipient address rejected by server')
+            return
 
-            # username validation
+        # auto registration
+        # username validation
+        if username == self.site.getId():
+            return {FORM_ERROR_MARKER: 'You will need to signup again.',
+                    'username': _(u"This username is reserved. "
+                                  u"Please choose a different name.")}
 
-            if username == self.site.getId():
-                return {FORM_ERROR_MARKER: 'You will need to signup again.',
-                        'username': _(u"This username is reserved. "
-                                      u"Please choose a different name.")}
+        if not self.registration.isMemberIdAllowed(username):
+            return {FORM_ERROR_MARKER: 'You will need to signup again.',
+                    'username': _(u"The login name you selected is already "
+                                  u"in use or is not valid. "
+                                  u"Please choose another.")}
 
-            if not self.registration.isMemberIdAllowed(username):
-                return {FORM_ERROR_MARKER: 'You will need to signup again.',
-                        'username': _(u"The login name you selected is already "
-                                      u"in use or is not valid. "
-                                      u"Please choose another.")}
+        verified = validate_password(password)
 
-            verified = validate_password(password)
+        if verified['fail_message']:
+            return verified['fail_message']
 
-            if verified['fail_message']:
-                return verified['fail_message']
+        if not user_group in self.portal_groups.getGroupIds():
+            self.portal_groups.addGroup(user_group)
 
-            if not user_group in self.portal_groups.getGroupIds():
-                self.portal_groups.addGroup(user_group)
-
-            create_member(REQUEST, username, verified['password'], email,
-                          verified['reset_password'], user_group)
+        create_member(REQUEST, username, verified['password'], email,
+                      verified['reset_password'], user_group)
 
         return
 
@@ -342,6 +354,7 @@ def create_member(request, username, password, email, reset_password,
         IStatusMessage(request).addStatusMessage(err, type="error")
         return
 
+
 def validate_password(password):
     site = getSite()
     registration = getToolByName(site, 'portal_registration')
@@ -355,7 +368,7 @@ def validate_password(password):
                             'password': failMessage}
 
         # do the registration
-        #TODO should based on turn on self-registration flag?
+        # Should based on turn on self-registration flag?
         #refer to plone.app.users/browser/register.py
         # data = {'username': 'user3', 'fullname': u'User3',
         # 'password': u'qwert', 'email': 'user3@mail.com',

@@ -119,6 +119,10 @@ class UserApproverView(BrowserView):
 
 
 class UserManagementView(BrowserView):
+    # TODO The form in user_management_view need to have Plone csrf protection
+    # not sure this is the right way for passing data in Plone
+    # datatable plugin is the right tool for this case?
+    # redirect in the view is right way to do it?
     index = ViewPageTemplateFile("templates/user_management_view.pt")
 
     def __init__(self, context, request):
