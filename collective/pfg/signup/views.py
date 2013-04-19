@@ -8,6 +8,8 @@ import hashlib
 
 
 class UserApproverView(BrowserView):
+    # TODO: Browser view need to have custom permission that only able to view
+    # by Authenticated user. For now, it is public.
     index = ViewPageTemplateFile("templates/user_approver_view.pt")
 
     def __init__(self, context, request):
@@ -123,6 +125,8 @@ class UserManagementView(BrowserView):
     # not sure this is the right way for passing data in Plone
     # datatable plugin is the right tool for this case?
     # redirect in the view is right way to do it?
+    # TODO: Browser view need to have custom permission that only able to view
+    # by Authenticated user. For now, it is public.
     index = ViewPageTemplateFile("templates/user_management_view.pt")
 
     def __init__(self, context, request):
@@ -150,6 +154,8 @@ class UserManagementView(BrowserView):
             return self.index()
 
         results_string = self.request['results']
+        is_approve = self.request['submit']
+
         results = []
         for result in results_string.split('&'):
             key_hash, _ = result.split("=")
@@ -165,12 +171,15 @@ class UserManagementView(BrowserView):
                 # TODO raise error?
                 continue
 
-            del context.waiting_list[key_hash]
-            results.append(key_id)
+            if is_approve == 'approve' or is_approve == 'reject':
+                del context.waiting_list[key_hash]
+                results.append(key_id)
 
         user_id = portal_membership.getAuthenticatedMember().getId()
         portal_groups = getToolByName(context, 'portal_groups')
         user_groups = portal_groups.getGroupsByUserId(user_id)
+
+
 
         # get the user approval list based on groups
         for user_group in user_groups:
@@ -189,21 +198,26 @@ class UserManagementView(BrowserView):
 
                 this_result = all_results[key]
 
-                username = this_result['username']
-                password = this_result['password']
-                email = this_result['email']
-                user_group = this_result['user_group']
+                if is_approve == 'approve':
 
-                verified = validate_password(password)
+                    username = this_result['username']
+                    password = this_result['password']
+                    email = this_result['email']
+                    user_group = this_result['user_group']
 
-                if verified['fail_message']:
-                    return verified['fail_message']
+                    verified = validate_password(password)
 
-                # create an account:
-                create_member(self.request, username, verified['password'],
-                              email, verified['reset_password'],
-                              user_group)
+                    if verified['fail_message']:
+                        return verified['fail_message']
 
-                del waiting_by_approver[user_group_name][key]
+                    # create an account:
+                    create_member(self.request, username, verified['password'],
+                                  email, verified['reset_password'],
+                                  user_group)
+
+                    del waiting_by_approver[user_group_name][key]
+                elif is_approve == 'reject':
+                    del waiting_by_approver[user_group_name][key]
+
 
         return self.index()

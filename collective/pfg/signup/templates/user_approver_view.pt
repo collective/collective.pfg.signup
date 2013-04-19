@@ -13,7 +13,7 @@
         <script type="text/javascript"
                 tal:define="aaData python:view.result_data();
                             aoColumns python:view.result_columns();
-                            thisUrl python:view.context.absolute_url();"
+                            redirectUrl python:view.context.absolute_url();"
                 tal:content="structure string:
             if (typeof jQuery !== 'undefined') {
 
@@ -21,13 +21,25 @@
                     var oTable;
 
                     $('#dynamicForm').submit( function() {
+		                return false;
+                    });
+                    $('#dynamicForm .submit_approve').click( function() {
 		                var sData = oTable.$('input').serialize();
 		                alert('The following data would have been submitted to the server: \n\n'+sData );
-		                $.post('${thisUrl}/user_management_view', {
-		                    results: sData
+		                $.post($('#dynamicForm').attr('action'), {
+		                    'results': sData,
+		                    'submit': $(this).attr('value')
 		                });
-		                window.location.href = '${thisUrl}';
-                        return false;
+		                window.location.href = '${redirectUrl}';
+                    });
+                    $('#dynamicForm .submit_reject').click( function() {
+		                var sData = oTable.$('input').serialize();
+		                alert('The following data would have been submitted to the server: \n\n'+sData );
+		                $.post($('#dynamicForm').attr('action'), {
+		                    'results': sData,
+		                    'submit': $(this).attr('value')
+		                });
+		                window.location.href = '${redirectUrl}';
                     });
 
 
@@ -45,14 +57,17 @@
     <body >
 
         <metal:core fill-slot="content-core"
-                    tal:define="form python:view.context">
+                    tal:define="form python:view.context;
+                                postUrl python:view.context.absolute_url()+'/user_management_view';">
             <div class="message">
                 <p class="results" tal:content="view/results">Results</p>
             </div>
             <div id="dynamic">
-                <form id="dynamicForm">
+                <form id="dynamicForm" action="" method="post"
+                      tal:attributes="action postUrl">
                 <div style="text-align:right; padding-bottom:1em;">
-                    <button type="submit">Submit form</button>
+                    <button type="submit" class="submit_approve" name="submit" value="approve">Approve</button>
+                    <button type="submit" class="submit_reject" name="submit" value="reject">Reject</button>
                 </div>
                 <table cellpadding="0"
                        cellspacing="0"
