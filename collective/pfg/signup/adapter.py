@@ -142,6 +142,7 @@ class SignUpAdapter(FormActionAdapter):
         username = None
         email = None
         password = None
+        password_verify = None
 
         approval_group = self.generate_group(REQUEST, self.approval_group_template)
         user_group = self.generate_group(REQUEST, self.user_group_template)
@@ -170,6 +171,18 @@ class SignUpAdapter(FormActionAdapter):
 
         if not username:
             username = email
+
+        # username validation
+        if username == self.site.getId():
+            return {FORM_ERROR_MARKER: 'You will need to signup again.',
+                'username': _(u"This username is reserved. "
+                              u"Please choose a different name.")}
+    
+        if not portal_registration.isMemberIdAllowed(username):
+            return {FORM_ERROR_MARKER: 'You will need to signup again.',
+                'username': _(u"The login name you selected is already "
+                              u"in use or is not valid. "
+                              u"Please choose another.")}
 
         if approval_group:
             #should use hash the same way as plone if want to store password
@@ -298,18 +311,6 @@ class SignUpAdapter(FormActionAdapter):
             return
 
         # auto registration
-        # username validation
-        if username == self.site.getId():
-            return {FORM_ERROR_MARKER: 'You will need to signup again.',
-                    'username': _(u"This username is reserved. "
-                                  u"Please choose a different name.")}
-
-        if not portal_registration.isMemberIdAllowed(username):
-            return {FORM_ERROR_MARKER: 'You will need to signup again.',
-                    'username': _(u"The login name you selected is already "
-                                  u"in use or is not valid. "
-                                  u"Please choose another.")}
-
         verified = validate_password(password)
 
         if verified['fail_message']:
