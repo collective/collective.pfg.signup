@@ -147,53 +147,54 @@ class SignUpAdapter(FormActionAdapter):
         approval_group = self.generate_group(REQUEST, self.approval_group_template)
         user_group = self.generate_group(REQUEST, self.user_group_template)
 
+        data = {}
         for field in fields:
             fname = field.fgField.getName()
             val = REQUEST.form.get(fname, None)
             if fname == self.full_name_field:
-                fullname = val
+                data['fullname'] = val
             elif fname == self.username_field:
-                username = val
+                data['username'] = val
             elif fname == self.email_field:
-                email = val
+                data['email'] = val
             elif fname == self.password_field:
-                password = val
+                data['password'] = val
 
-        # should we verify the two passwords are the same again?
+        role = REQUEST.form.get('role', None)
 
-        if email is None or user_group == "":
+        if data['email'] is None or user_group == "":
             # SignUpAdapter did not setup properly
             return {FORM_ERROR_MARKER: 'Sign Up form is not setup properly.'}
 
-        email_from = self.portal.getProperty('email_from_address')
-        if not portal_registration.isValidEmail(email_from):
-            return {FORM_ERROR_MARKER: 'Portal email is not configured.'}
-
-        if not username:
-            username = email
+        if not data['username']:
+            data['username'] = data['email']
 
         # username validation
-        if username == self.site.getId():
+        if data['username'] == self.site.getId():
             return {FORM_ERROR_MARKER: 'You will need to signup again.',
                 'username': _(u"This username is reserved. "
                               u"Please choose a different name.")}
-    
-        if not portal_registration.isMemberIdAllowed(username):
+
+        if not portal_registration.isMemberIdAllowed(data['username']):
             return {FORM_ERROR_MARKER: 'You will need to signup again.',
                 'username': _(u"The login name you selected is already "
                               u"in use or is not valid. "
                               u"Please choose another.")}
 
-        if approval_group:
-            #should use hash the same way as plone if want to store password
-            if password:
-                secret_password = encode(self.SECRET_KEY, password)
-            else:
-                secret_password = password
+        if role == 'auto':
+            self.autoRegister(REQUEST, data, user_group)
+            return
 
-            # just email is enough?
-            key_id = encode(self.SECRET_KEY, email)
-            key_hash = hashlib.sha224(key_id).hexdigest()
+        email_from = self.portal.getProperty('email_from_address')
+        if not portal_registration.isValidEmail(email_from):
+            return {FORM_ERROR_MARKER: 'Portal email is not configured.'}
+
+        if role == 'email':
+            self.autoRegister(REQUEST, data, user_group)
+            return
+
+        if approval_group:
+            #approval don't need password, as they should get reset email
 
             full_form_data = REQUEST.form
             #form_column = ['key_id']
@@ -310,18 +311,28 @@ class SignUpAdapter(FormActionAdapter):
                     'Recipient address rejected by server')
             return
 
-        # auto registration
-        verified = validate_password(password)
+    def emailRegister(self, REQUEST, data, user_group):
+        """User type should be authenticated by email,
+        so randomize their password and send a password reset"""
+        create_member(REQUEST, data['username'], verified['password'], data['email'],
+            True, user_group)
+        return
+
+
+    def autoRegister(self, REQUEST, data, user_group):
+        """User type can be auto registered, so pass them through"""
+        verified = validate_password(data['password'])
 
         if verified['fail_message']:
             return verified['fail_message']
 
-        if not user_group in self.portal_groups.getGroupIds():
-            self.portal_groups.addGroup(user_group)
+        # This is a bad idea, if anon is filling in the form they will get a permission error
+        #if not user_group in self.portal_groups.getGroupIds():
+            #self.portal_groups.addGroup(user_group)
 
-        create_member(REQUEST, username, verified['password'], email,
+        # shouldn't store this in the pfg, as once the user is created, we shouldn't care
+        create_member(REQUEST, data['username'], verified['password'], data['email'],
                       verified['reset_password'], user_group)
-
         return
 
 
