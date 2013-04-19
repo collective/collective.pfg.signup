@@ -137,6 +137,7 @@ class SignUpAdapter(FormActionAdapter):
     def onSuccess(self, fields, REQUEST=None):
         """Save form input."""
         # get username and password
+        portal_registration = getToolByName(self, 'portal_registration')
         fullname = None
         username = None
         email = None
@@ -162,6 +163,10 @@ class SignUpAdapter(FormActionAdapter):
         if email is None or user_group == "":
             # SignUpAdapter did not setup properly
             return {FORM_ERROR_MARKER: 'Sign Up form is not setup properly.'}
+
+        email_from = self.portal.getProperty('email_from_address')
+        if not portal_registration.isValidEmail(email_from):
+            return {FORM_ERROR_MARKER: 'Portal email is not configured.'}
 
         if not username:
             username = email
@@ -299,7 +304,7 @@ class SignUpAdapter(FormActionAdapter):
                     'username': _(u"This username is reserved. "
                                   u"Please choose a different name.")}
 
-        if not self.registration.isMemberIdAllowed(username):
+        if not portal_registration.isMemberIdAllowed(username):
             return {FORM_ERROR_MARKER: 'You will need to signup again.',
                     'username': _(u"The login name you selected is already "
                                   u"in use or is not valid. "
