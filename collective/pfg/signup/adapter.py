@@ -158,6 +158,7 @@ class SignUpAdapter(FormActionAdapter):
                 data['email'] = val
             elif fname == self.password_field:
                 data['password'] = val
+        data['password_verify'] = REQUEST.form.get('password_verify', None)
 
         role = REQUEST.form.get('role', None)
 
@@ -316,25 +317,23 @@ class SignUpAdapter(FormActionAdapter):
         """User type should be authenticated by email,
         so randomize their password and send a password reset"""
         portal_registration = getToolByName(self, 'portal_registration')
-        data['passwrd'] = portal_registration.generatePassword()
+        data['password'] = portal_registration.generatePassword()
         self.create_member(REQUEST, data, True, user_group)
         return
 
 
     def autoRegister(self, REQUEST, data, user_group):
         """User type can be auto registered, so pass them through"""
-        verified = self.validate_password(data['password'])
-
-        if verified['fail_message']:
-            return verified['fail_message']
+        verified = self.validate_password(data)
+        if verified:
+            return verified
 
         # This is a bad idea, if anon is filling in the form they will get a permission error
         #if not user_group in self.portal_groups.getGroupIds():
             #self.portal_groups.addGroup(user_group)
 
         # shouldn't store this in the pfg, as once the user is created, we shouldn't care
-        result = self.create_member(REQUEST, data,
-                           verified['reset_password'], user_group)
+        result = self.create_member(REQUEST, data, False, user_group)
         return result
 
     def create_member(self, request, data, reset_password, user_group):
@@ -369,33 +368,28 @@ class SignUpAdapter(FormActionAdapter):
             logging.exception(err)
             return {FORM_ERROR_MARKER: err}
 
-    def validate_password(self, password):
+    def validate_password(self, data):
+        errors = {}
+        if not data['password']:
+            errors['password'] = 'Please enter a password'
+        if not data['password_verify']:
+            errors['password_verify'] = 'Please enter a password'
+        if errors:
+            errors[FORM_ERROR_MARKER] = 'Please enter a password'
+            return errors
+        if data['password'] != data['password_verify']:
+            errors[FORM_ERROR_MARKER] = 'The passwords do not match'
+            errors['password'] = 'The passwords do not match'
+            errors['password_verify'] = 'The passwords do not match'
+            return errors
+
         registration = getToolByName(self, 'portal_registration')
-        reset_password = False
-        fail_message = None
-
-        if password:
-            failMessage = registration.testPasswordValidity(password)
-            if failMessage is not None:
-                fail_message = {FORM_ERROR_MARKER: 'You will need to signup again.',
-                                'password': failMessage}
-
-            # do the registration
-            # Should based on turn on self-registration flag?
-            #refer to plone.app.users/browser/register.py
-            # data = {'username': 'user3', 'fullname': u'User3',
-            # 'password': u'qwert', 'email': 'user3@mail.com',
-            # 'password_ctl': u'qwert'}
-            if isinstance(password, unicode):
-                password = password.encode('utf8')
-
-        else:
-            # generate random string and
-            # set send out reset password email flag
-            password = registration.generatePassword()
-            reset_password = True
-
-        return {'password': password, 'reset_password': reset_password,
-                'fail_message': fail_message}
+        error_message = registration.testPasswordValidity(data['password'])
+        if error_message:
+            errors[FORM_ERROR_MARKER] = error_message
+            errors['password'] = ' '
+            errors['password_verify'] = ' '
+            return errors
+        return None
 
 registerATCT(SignUpAdapter, PROJECTNAME)
