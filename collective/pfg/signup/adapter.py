@@ -384,6 +384,8 @@ class SignUpAdapter(FormActionAdapter):
             return errors
 
         registration = getToolByName(self, 'portal_registration')
+        # This should ensure that the password is at least 5 chars long, but
+        # if the user filling in the form has ManagePortal permission it is ignored
         error_message = registration.testPasswordValidity(data['password'])
         if error_message:
             errors[FORM_ERROR_MARKER] = error_message
