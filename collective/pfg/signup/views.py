@@ -187,13 +187,8 @@ class UserManagementView(BrowserView):
 
                 data = all_results[key]
 
-                verified = context.validate_password(data['password'])
-
-                if verified['fail_message']:
-                    return verified['fail_message']
-
                 # create an account:
-                self.create_member(self.request, data, verified['reset_password'],
+                self.create_member(self.request, data, True,
                                   user_group)
 
                 del waiting_by_approver[user_group_name][key]
