@@ -181,16 +181,18 @@ class SignUpAdapter(FormActionAdapter):
                               u"Please choose another.")}
 
         if role == 'auto':
-            self.autoRegister(REQUEST, data, user_group)
-            return
+            result = self.autoRegister(REQUEST, data, user_group)
+            # Just return the result, this should either be None on success or an error message
+            return result
 
         email_from = self.portal.getProperty('email_from_address')
         if not portal_registration.isValidEmail(email_from):
             return {FORM_ERROR_MARKER: 'Portal email is not configured.'}
 
         if role == 'email':
-            self.autoRegister(REQUEST, data, user_group)
-            return
+            result = self.autoRegister(REQUEST, data, user_group)
+            if result is not None:
+                return result
 
         if approval_group:
             #approval don't need password, as they should get reset email
@@ -331,9 +333,9 @@ class SignUpAdapter(FormActionAdapter):
             #self.portal_groups.addGroup(user_group)
 
         # shouldn't store this in the pfg, as once the user is created, we shouldn't care
-        self.create_member(REQUEST, data,
+        result = self.create_member(REQUEST, data,
                            verified['reset_password'], user_group)
-        return
+        return result
 
     def create_member(self, request, data, reset_password, user_group):
         portal_membership = getToolByName(self, 'portal_membership')
@@ -369,8 +371,7 @@ class SignUpAdapter(FormActionAdapter):
 
         except(AttributeError, ValueError), err:
             logging.exception(err)
-            IStatusMessage(request).addStatusMessage(err, type="error")
-            return
+            return {FORM_ERROR_MARKER: err}
 
     def validate_password(self, password):
         registration = getToolByName(self, 'portal_registration')
