@@ -143,7 +143,7 @@ class SignUpAdapter(FormActionAdapter):
         password = None
         password_verify = None
 
-        approval_group = self.generate_group(REQUEST, self.approval_group_template)
+        #approval_group = self.generate_group(REQUEST, self.approval_group_template)
         user_group = self.generate_group(REQUEST, self.user_group_template)
 
         data = {}
@@ -181,6 +181,8 @@ class SignUpAdapter(FormActionAdapter):
                               u"in use or is not valid. "
                               u"Please choose another.")}
 
+        # TODO check waiting list for usernames
+
         if role == 'auto':
             result = self.autoRegister(REQUEST, data, user_group)
             # Just return the result, this should either be None on success or an error message
@@ -194,14 +196,49 @@ class SignUpAdapter(FormActionAdapter):
             result = self.emailRegister(REQUEST, data, user_group)
             return result
 
-        if role == 'email':
-            result = self.emailRegister(REQUEST, data, user_group)
+        if role == 'approval':
+            result = self.approvalRegister(REQUEST, data, user_group)
             return result
 
         # If we get here, then no role was selected
         return {FORM_ERROR_MARKER: _(u'Please select a role'),
                 'role': _(u'Please select a role')}
 
+    def approvalRegister(self, REQUEST, data, user_group):
+        """User type requires approval,
+        so store them on the approval list"""
+        # make sure password fields are empty
+        data['password'] = ''
+        data['password_verify'] = ''
+        self.waiting_list[data['username']] = data
+
+        # need an email address for the approvers group
+        administrators = self.portal_groups.getGroupById('Administrators')
+        administrators_email = administrators.getProperty('email')
+        if not administrators_email:
+            administrators_email = self.portal.getProperty('email_from_address')
+        try:
+            self.sendApprovalEmail(data)
+        except SMTPRecipientsRefused:
+            # Don't disclose email address on failure
+            raise SMTPRecipientsRefused('Recipient address rejected by server')
+
+    def sendApprovalEmail(self, data):
+        """Send an approval request email"""
+        # TODO Create waiting list email template
+        mail_body = u"Your account is waiting for approval. " \
+                    u"Thank you. "
+        mail_text = message_from_string(mail_body.encode('utf-8'))
+        mail_text.set_charset('utf-8')
+        mail_text['X-Custom'] = Header(u'Some Custom Parameter', 'utf-8')
+        self.mail_host.send(mail_text, mto=data['email'],
+                            mfrom=self.portal.getProperty('email_from_address'),
+                            subject='Waiting for approval', immediate=True)
+        return
+
+                      
+    def groupEmail(self, data):
+        # TODO not sure if this is required
         if approval_group:
             #approval don't need password, as they should get reset email
 
@@ -327,7 +364,6 @@ class SignUpAdapter(FormActionAdapter):
         data['password'] = portal_registration.generatePassword()
         result = self.create_member(REQUEST, data, True, user_group)
         return result
-
 
     def autoRegister(self, REQUEST, data, user_group):
         """User type can be auto registered, so pass them through"""
