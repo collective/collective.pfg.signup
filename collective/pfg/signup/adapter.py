@@ -191,9 +191,8 @@ class SignUpAdapter(FormActionAdapter):
             return {FORM_ERROR_MARKER: 'Portal email is not configured.'}
 
         if role == 'email':
-            result = self.autoRegister(REQUEST, data, user_group)
-            if result is not None:
-                return result
+            result = self.emailRegister(REQUEST, data, user_group)
+            return result
 
         if approval_group:
             #approval don't need password, as they should get reset email
@@ -318,8 +317,8 @@ class SignUpAdapter(FormActionAdapter):
         so randomize their password and send a password reset"""
         portal_registration = getToolByName(self, 'portal_registration')
         data['password'] = portal_registration.generatePassword()
-        self.create_member(REQUEST, data, True, user_group)
-        return
+        result = self.create_member(REQUEST, data, True, user_group)
+        return result
 
 
     def autoRegister(self, REQUEST, data, user_group):
