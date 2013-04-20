@@ -1,3 +1,5 @@
+from persistent.list import PersistentList
+from persistent.mapping import PersistentMapping
 from zope.interface import implements
 from AccessControl import ClassSecurityInfo
 from Products.Archetypes import atapi
@@ -436,5 +438,25 @@ class SignUpAdapter(FormActionAdapter):
             errors['password_verify'] = ' '
             return errors
         return None
+
+    def approve_user(self):
+        """Approve the user based on the request"""
+        # TODO: Check user has permissions and is in right group to approve the user
+        request = self.REQUEST
+        portal_registration = getToolByName(self, 'portal_registration')
+        userid = request.form['userid']
+        user = self.waiting_list.pop(userid)
+        user['password'] = portal_registration.generatePassword()
+        user_group = self.generate_group(request, self.user_group_template)
+        self.create_member(request, user, True, user_group)
+        request.RESPONSE.redirect(self.absolute_url())
+
+    def reject_user(self):
+        """Reject the user based on the request"""
+        # TODO: Check user has permissions and is in right group to approve the user
+        request = self.REQUEST
+        userid = request.form['userid']
+        user = self.waiting_list.pop(userid)
+        request.RESPONSE.redirect(self.absolute_url())
 
 registerATCT(SignUpAdapter, PROJECTNAME)
