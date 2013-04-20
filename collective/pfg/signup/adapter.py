@@ -194,6 +194,14 @@ class SignUpAdapter(FormActionAdapter):
             result = self.emailRegister(REQUEST, data, user_group)
             return result
 
+        if role == 'email':
+            result = self.emailRegister(REQUEST, data, user_group)
+            return result
+
+        # If we get here, then no role was selected
+        return {FORM_ERROR_MARKER: 'Please select a role',
+                'role': 'Please select a role'}
+
         if approval_group:
             #approval don't need password, as they should get reset email
 
