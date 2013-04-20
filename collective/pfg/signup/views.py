@@ -3,7 +3,6 @@ from Products.Five import BrowserView
 from zope.interface import implements
 from zope.component import getMultiAdapter
 from Products.CMFCore.utils import getToolByName
-from adapter import create_member, validate_password
 import hashlib
 
 
@@ -194,15 +193,15 @@ class UserManagementView(BrowserView):
                 email = this_result['email']
                 user_group = this_result['user_group']
 
-                verified = validate_password(password)
+                verified = context.validate_password(password)
 
                 if verified['fail_message']:
                     return verified['fail_message']
 
                 # create an account:
-                create_member(self.request, username, verified['password'],
-                              email, verified['reset_password'],
-                              user_group)
+                self.create_member(self.request, username, verified['password'],
+                                  email, verified['reset_password'],
+                                  user_group)
 
                 del waiting_by_approver[user_group_name][key]
 

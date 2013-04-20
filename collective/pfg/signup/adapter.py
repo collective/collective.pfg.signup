@@ -314,14 +314,14 @@ class SignUpAdapter(FormActionAdapter):
     def emailRegister(self, REQUEST, data, user_group):
         """User type should be authenticated by email,
         so randomize their password and send a password reset"""
-        create_member(REQUEST, data['username'], verified['password'], data['email'],
+        self.create_member(REQUEST, data['username'], verified['password'], data['email'],
             True, user_group)
         return
 
 
     def autoRegister(self, REQUEST, data, user_group):
         """User type can be auto registered, so pass them through"""
-        verified = validate_password(data['password'])
+        verified = self.validate_password(data['password'])
 
         if verified['fail_message']:
             return verified['fail_message']
@@ -331,76 +331,73 @@ class SignUpAdapter(FormActionAdapter):
             #self.portal_groups.addGroup(user_group)
 
         # shouldn't store this in the pfg, as once the user is created, we shouldn't care
-        create_member(REQUEST, data['username'], verified['password'], data['email'],
-                      verified['reset_password'], user_group)
+        self.create_member(REQUEST, data['username'], verified['password'], data['email'],
+                           verified['reset_password'], user_group)
         return
 
+    def create_member(self, request, username, password, email, reset_password,
+                      user_group):
+        site = getSite()
+        portal_membership = getToolByName(site, 'portal_membership')
+        portal_registration = getToolByName(site, 'portal_registration')
+        portal_groups = getToolByName(site, 'portal_groups')
 
-def create_member(request, username, password, email, reset_password,
-                  user_group):
-    site = getSite()
-    portal_membership = getToolByName(site, 'portal_membership')
-    portal_registration = getToolByName(site, 'portal_registration')
-    portal_groups = getToolByName(site, 'portal_groups')
+        try:
+            member = portal_membership.getMemberById(username)
 
-    try:
-        member = portal_membership.getMemberById(username)
+            if member is None:
+                member = portal_registration.addMember(
+                    username, password,
+                    properties={'username': username,
+                                'email': email})
 
-        if member is None:
-            member = portal_registration.addMember(
-                username, password,
-                properties={'username': username,
-                            'email': email})
+            if not user_group in portal_groups.getGroupIds():
+                portal_groups.addGroup(user_group)
 
-        if not user_group in portal_groups.getGroupIds():
-            portal_groups.addGroup(user_group)
+            portal_groups.addPrincipalToGroup(member.getUserName(),
+                                              user_group)
 
-        portal_groups.addPrincipalToGroup(member.getUserName(),
-                                          user_group)
+            if member.has_role('Member'):
+                site.acl_users.portal_role_manager.removeRoleFromPrincipal(
+                    'Member', member.getUserName())
 
-        if member.has_role('Member'):
-            site.acl_users.portal_role_manager.removeRoleFromPrincipal(
-                'Member', member.getUserName())
+            if reset_password:
+                # send out reset password email
+                portal_registration.mailPassword(username, request)
 
-        if reset_password:
-            # send out reset password email
-            portal_registration.mailPassword(username, request)
+        except(AttributeError, ValueError), err:
+            logging.exception(err)
+            IStatusMessage(request).addStatusMessage(err, type="error")
+            return
 
-    except(AttributeError, ValueError), err:
-        logging.exception(err)
-        IStatusMessage(request).addStatusMessage(err, type="error")
-        return
+    def validate_password(self, password):
+        site = getSite()
+        registration = getToolByName(site, 'portal_registration')
+        reset_password = False
+        fail_message = None
 
+        if password:
+            failMessage = registration.testPasswordValidity(password)
+            if failMessage is not None:
+                fail_message = {FORM_ERROR_MARKER: 'You will need to signup again.',
+                                'password': failMessage}
 
-def validate_password(password):
-    site = getSite()
-    registration = getToolByName(site, 'portal_registration')
-    reset_password = False
-    fail_message = None
+            # do the registration
+            # Should based on turn on self-registration flag?
+            #refer to plone.app.users/browser/register.py
+            # data = {'username': 'user3', 'fullname': u'User3',
+            # 'password': u'qwert', 'email': 'user3@mail.com',
+            # 'password_ctl': u'qwert'}
+            if isinstance(password, unicode):
+                password = password.encode('utf8')
 
-    if password:
-        failMessage = registration.testPasswordValidity(password)
-        if failMessage is not None:
-            fail_message = {FORM_ERROR_MARKER: 'You will need to signup again.',
-                            'password': failMessage}
+        else:
+            # generate random string and
+            # set send out reset password email flag
+            password = registration.generatePassword()
+            reset_password = True
 
-        # do the registration
-        # Should based on turn on self-registration flag?
-        #refer to plone.app.users/browser/register.py
-        # data = {'username': 'user3', 'fullname': u'User3',
-        # 'password': u'qwert', 'email': 'user3@mail.com',
-        # 'password_ctl': u'qwert'}
-        if isinstance(password, unicode):
-            password = password.encode('utf8')
-
-    else:
-        # generate random string and
-        # set send out reset password email flag
-        password = registration.generatePassword()
-        reset_password = True
-
-    return {'password': password, 'reset_password': reset_password,
-            'fail_message': fail_message}
-
+        return {'password': password, 'reset_password': reset_password,
+                'fail_message': fail_message}
 
 registerATCT(SignUpAdapter, PROJECTNAME)
