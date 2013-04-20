@@ -164,19 +164,19 @@ class SignUpAdapter(FormActionAdapter):
 
         if data['email'] is None or user_group == "":
             # SignUpAdapter did not setup properly
-            return {FORM_ERROR_MARKER: 'Sign Up form is not setup properly.'}
+            return {FORM_ERROR_MARKER: _(u'Sign Up form is not setup properly.')}
 
         if not data['username']:
             data['username'] = data['email']
 
         # username validation
         if data['username'] == self.site.getId():
-            return {FORM_ERROR_MARKER: 'You will need to signup again.',
+            return {FORM_ERROR_MARKER: _(u'You will need to signup again.'),
                 'username': _(u"This username is reserved. "
                               u"Please choose a different name.")}
 
         if not portal_registration.isMemberIdAllowed(data['username']):
-            return {FORM_ERROR_MARKER: 'You will need to signup again.',
+            return {FORM_ERROR_MARKER: _(u'You will need to signup again.'),
                 'username': _(u"The login name you selected is already "
                               u"in use or is not valid. "
                               u"Please choose another.")}
@@ -188,7 +188,7 @@ class SignUpAdapter(FormActionAdapter):
 
         email_from = self.portal.getProperty('email_from_address')
         if not portal_registration.isValidEmail(email_from):
-            return {FORM_ERROR_MARKER: 'Portal email is not configured.'}
+            return {FORM_ERROR_MARKER: _(u'Portal email is not configured.')}
 
         if role == 'email':
             result = self.emailRegister(REQUEST, data, user_group)
@@ -199,8 +199,8 @@ class SignUpAdapter(FormActionAdapter):
             return result
 
         # If we get here, then no role was selected
-        return {FORM_ERROR_MARKER: 'Please select a role',
-                'role': 'Please select a role'}
+        return {FORM_ERROR_MARKER: _(u'Please select a role'),
+                'role': _(u'Please select a role')}
 
         if approval_group:
             #approval don't need password, as they should get reset email
@@ -378,16 +378,16 @@ class SignUpAdapter(FormActionAdapter):
     def validate_password(self, data):
         errors = {}
         if not data['password']:
-            errors['password'] = 'Please enter a password'
+            errors['password'] = _(u'Please enter a password')
         if not data['password_verify']:
-            errors['password_verify'] = 'Please enter a password'
+            errors['password_verify'] = _(u'Please enter a password')
         if errors:
-            errors[FORM_ERROR_MARKER] = 'Please enter a password'
+            errors[FORM_ERROR_MARKER] = _(u'Please enter a password')
             return errors
         if data['password'] != data['password_verify']:
-            errors[FORM_ERROR_MARKER] = 'The passwords do not match'
-            errors['password'] = 'The passwords do not match'
-            errors['password_verify'] = 'The passwords do not match'
+            errors[FORM_ERROR_MARKER] = _(u'The passwords do not match')
+            errors['password'] = _(u'The passwords do not match')
+            errors['password_verify'] = _(u'The passwords do not match')
             return errors
 
         registration = getToolByName(self, 'portal_registration')
