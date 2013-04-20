@@ -350,7 +350,7 @@ class SignUpAdapter(FormActionAdapter):
                 # need to also pass username in properties, otherwise the user isn't found
                 # when setting the properties
                 member = portal_registration.addMember(
-                    username, data['password'],
+                    username, data['password'], [],
                     properties={'username': username,
                                 'fullname': data['fullname'],
                                 'email': data['email']})
@@ -360,10 +360,6 @@ class SignUpAdapter(FormActionAdapter):
 
             portal_groups.addPrincipalToGroup(member.getUserName(),
                                               user_group)
-
-            if member.has_role('Member'):
-                self.acl_users.portal_role_manager.removeRoleFromPrincipal(
-                    'Member', member.getUserName())
 
             if reset_password:
                 # send out reset password email
