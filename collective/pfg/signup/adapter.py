@@ -345,9 +345,12 @@ class SignUpAdapter(FormActionAdapter):
             member = portal_membership.getMemberById(username)
 
             if member is None:
+                # need to also pass username in properties, otherwise the user isn't found
+                # when setting the properties
                 member = portal_registration.addMember(
                     username, data['password'],
                     properties={'username': username,
+                                'fullname': data['fullname'],
                                 'email': data['email']})
 
             if not user_group in portal_groups.getGroupIds():
