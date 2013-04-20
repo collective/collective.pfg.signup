@@ -14,7 +14,6 @@ from Products.statusmessages.interfaces import IStatusMessage
 from Products.CMFCore.utils import getToolByName
 from zope.app.component.hooks import getSite
 from zope.component import getUtility
-from Products.CMFCore.interfaces import ISiteRoot
 from BTrees.OOBTree import OOBTree
 from encrypt import encode
 from smtplib import SMTPRecipientsRefused
@@ -314,8 +313,9 @@ class SignUpAdapter(FormActionAdapter):
     def emailRegister(self, REQUEST, data, user_group):
         """User type should be authenticated by email,
         so randomize their password and send a password reset"""
-        self.create_member(REQUEST, data['username'], verified['password'], data['email'],
-            True, user_group)
+        portal_registration = getToolByName(self, 'portal_registration')
+        data['passwrd'] = portal_registration.generatePassword()
+        self.create_member(REQUEST, data, True, user_group)
         return
 
 
@@ -331,25 +331,24 @@ class SignUpAdapter(FormActionAdapter):
             #self.portal_groups.addGroup(user_group)
 
         # shouldn't store this in the pfg, as once the user is created, we shouldn't care
-        self.create_member(REQUEST, data['username'], verified['password'], data['email'],
+        self.create_member(REQUEST, data,
                            verified['reset_password'], user_group)
         return
 
-    def create_member(self, request, username, password, email, reset_password,
-                      user_group):
-        site = getSite()
-        portal_membership = getToolByName(site, 'portal_membership')
-        portal_registration = getToolByName(site, 'portal_registration')
-        portal_groups = getToolByName(site, 'portal_groups')
+    def create_member(self, request, data, reset_password, user_group):
+        portal_membership = getToolByName(self, 'portal_membership')
+        portal_registration = getToolByName(self, 'portal_registration')
+        portal_groups = getToolByName(self, 'portal_groups')
+        username = data['username']
 
         try:
             member = portal_membership.getMemberById(username)
 
             if member is None:
                 member = portal_registration.addMember(
-                    username, password,
+                    username, data['password'],
                     properties={'username': username,
-                                'email': email})
+                                'email': data['email']})
 
             if not user_group in portal_groups.getGroupIds():
                 portal_groups.addGroup(user_group)
@@ -358,7 +357,7 @@ class SignUpAdapter(FormActionAdapter):
                                               user_group)
 
             if member.has_role('Member'):
-                site.acl_users.portal_role_manager.removeRoleFromPrincipal(
+                self.acl_users.portal_role_manager.removeRoleFromPrincipal(
                     'Member', member.getUserName())
 
             if reset_password:
@@ -371,8 +370,7 @@ class SignUpAdapter(FormActionAdapter):
             return
 
     def validate_password(self, password):
-        site = getSite()
-        registration = getToolByName(site, 'portal_registration')
+        registration = getToolByName(self, 'portal_registration')
         reset_password = False
         fail_message = None
 

@@ -179,28 +179,21 @@ class UserManagementView(BrowserView):
 
             all_results = waiting_by_approver[user_group_name]
 
-
             for key in results:
 
                 # TODO remove the waiting_list
                 if key not in all_results:
                     continue
 
-                this_result = all_results[key]
+                data = all_results[key]
 
-                username = this_result['username']
-                password = this_result['password']
-                email = this_result['email']
-                user_group = this_result['user_group']
-
-                verified = context.validate_password(password)
+                verified = context.validate_password(data['password'])
 
                 if verified['fail_message']:
                     return verified['fail_message']
 
                 # create an account:
-                self.create_member(self.request, username, verified['password'],
-                                  email, verified['reset_password'],
+                self.create_member(self.request, data, verified['reset_password'],
                                   user_group)
 
                 del waiting_by_approver[user_group_name][key]
