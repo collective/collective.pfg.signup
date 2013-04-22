@@ -3,7 +3,7 @@ from Products.Five import BrowserView
 from zope.interface import implements
 from zope.component import getMultiAdapter
 from Products.CMFCore.utils import getToolByName
-from adapter import create_member, validate_password
+from adapter import create_member, validate_password, send_email
 import hashlib
 
 
@@ -141,8 +141,6 @@ class UserManagementView(BrowserView):
         print "UserManagementView: call"
         context = self.context.aq_inner
         portal_membership = getToolByName(context, 'portal_membership')
-        waiting_by_approver = context.waiting_by_approver
-        waiting_list = context.waiting_list
 
         if portal_membership.isAnonymousUser():
             # Return target URL for the site anonymous visitors
@@ -153,16 +151,20 @@ class UserManagementView(BrowserView):
             # TODO return error??
             return self.index()
 
+        if 'submit' not in self.request:
+            # TODO return error??
+            return self.index()
+
         results_string = self.request['results']
         is_approve = self.request['submit']
 
         results = []
         for result in results_string.split('&'):
             key_hash, _ = result.split("=")
-            if key_hash not in waiting_list:
+            if key_hash not in context.waiting_list:
                 continue
 
-            key_id = waiting_list[key_hash]
+            key_id = context.waiting_list[key_hash]
 
             # need to verified?
             key_hash_original = hashlib.sha224(key_id).hexdigest()
@@ -179,16 +181,13 @@ class UserManagementView(BrowserView):
         portal_groups = getToolByName(context, 'portal_groups')
         user_groups = portal_groups.getGroupsByUserId(user_id)
 
-
-
         # get the user approval list based on groups
         for user_group in user_groups:
             user_group_name = user_group.getName()
-            if user_group_name not in waiting_by_approver:
+            if user_group_name not in context.waiting_by_approver:
                 continue
 
-            all_results = waiting_by_approver[user_group_name]
-
+            all_results = context.waiting_by_approver[user_group_name]
 
             for key in results:
 
@@ -197,12 +196,12 @@ class UserManagementView(BrowserView):
                     continue
 
                 this_result = all_results[key]
+                email = this_result['email']
 
                 if is_approve == 'approve':
-
                     username = this_result['username']
                     password = this_result['password']
-                    email = this_result['email']
+
                     user_group = this_result['user_group']
 
                     verified = validate_password(password)
@@ -215,9 +214,15 @@ class UserManagementView(BrowserView):
                                   email, verified['reset_password'],
                                   user_group)
 
-                    del waiting_by_approver[user_group_name][key]
+                    del context.waiting_by_approver[user_group_name][key]
                 elif is_approve == 'reject':
-                    del waiting_by_approver[user_group_name][key]
-
+                    # TODO: create reject email template
+                    mail_body = u"Sorry your user registration has been " \
+                                u"rejected. Thank you."
+                    send_email(mail_body,
+                               self.portal.getProperty('email_from_address'),
+                               email,
+                               'Rejected Email')
+                    del context.waiting_by_approver[user_group_name][key]
 
         return self.index()

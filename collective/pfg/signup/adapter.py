@@ -118,7 +118,6 @@ class SignUpAdapter(FormActionAdapter):
         self.waiting_by_approver = OOBTree()
         self.registration = getToolByName(self.site, 'portal_registration')
         self.portal_groups = getToolByName(self.site, 'portal_groups')
-        self.mail_host = getToolByName(self.site, 'MailHost')
         portal_url = getToolByName(self.site, 'portal_url')
         self.portal = portal_url.getPortalObject()
         self.excluded_field = ['form_submit', 'fieldset', 'last_referer',
@@ -210,44 +209,26 @@ class SignUpAdapter(FormActionAdapter):
                     'email_from_address')
 
             if approval_group:
-                try:
-                    # TODO Create waiting list email template
-                    mail_body = u"Your account is waiting for approval. " \
-                                u"Thank you. "
-                    mail_text = message_from_string(mail_body.encode('utf-8'))
-                    mail_text.set_charset('utf-8')
-                    mail_text['X-Custom'] = Header(u'Some Custom Parameter',
-                                                   'utf-8')
-                    self.mail_host.send(
-                        mail_text, mto=email,
-                        mfrom=self.portal.getProperty('email_from_address'),
-                        subject='Waiting for approval', immediate=True)
-                except SMTPRecipientsRefused:
-                    # Don't disclose email address on failure
-                    raise SMTPRecipientsRefused(
-                        'Recipient address rejected by server')
+                # TODO Create waiting list email template
+                mail_body = u"Your account is waiting for approval. " \
+                            u"Thank you. "
+                send_email(mail_body,
+                           self.portal.getProperty('email_from_address'),
+                           email,
+                           'Waiting for approval')
                 return
 
             # find the email from group and send out the email
             if not approval_group in self.portal_groups.getGroupIds():
                 #self.portal_groups.addGroup(approval_group)
                 # Raise unknown 'new group' and no email, should not happen
-                try:
-                    # TODO Create no existing group email template
-                    mail_body = u"There is a new group called %s waiting to" \
-                                u" create. " % approval_group
-                    mail_text = message_from_string(mail_body.encode('utf-8'))
-                    mail_text.set_charset('utf-8')
-                    mail_text['X-Custom'] = Header(u'Some Custom Parameter',
-                                                   'utf-8')
-                    self.mail_host.send(
-                        mail_text, mto=administrators_email,
-                        mfrom=self.portal.getProperty('email_from_address'),
-                        subject='New Group Email', immediate=True)
-                except SMTPRecipientsRefused:
-                    # Don't disclose email address on failure
-                    raise SMTPRecipientsRefused(
-                        'Recipient address rejected by server')
+                # TODO Create no existing group email template
+                mail_body = u"There is a new group called %s waiting to" \
+                            u" create. " % approval_group
+                send_email(mail_body,
+                           self.portal.getProperty('email_from_address'),
+                           administrators_email,
+                           'New Group Email')
                 return
 
             # else
@@ -255,41 +236,24 @@ class SignUpAdapter(FormActionAdapter):
             group_email = group.getProperty('email')
             if not group_email:
                 # TODO Create no approval group email template
-                try:
-                    mail_body = u"There is a user group %s does not have " \
-                                u"email. Thank you." % approval_group
-                    mail_text = message_from_string(mail_body.encode('utf-8'))
-                    mail_text.set_charset('utf-8')
-                    mail_text['X-Custom'] = Header(u'Some Custom Parameter',
-                                                   'utf-8')
-                    self.mail_host.send(
-                        mail_text, mto=administrators_email,
-                        mfrom=self.portal.getProperty('email_from_address'),
-                        subject='Approval Email', immediate=True)
-                except SMTPRecipientsRefused:
-                    # Don't disclose email address on failure
-                    raise SMTPRecipientsRefused(
-                        'Recipient address rejected by server')
+                mail_body = u"There is a user group %s does not have " \
+                            u"email. Thank you." % approval_group
+                send_email(mail_body,
+                           self.portal.getProperty('email_from_address'),
+                           administrators_email,
+                           'Approval Email')
                 return
 
-            try:
-                # TODO Create approval email template
-                mail_body = u"There is a user %s waiting for approval. " \
-                            u"Please approve at %s . " \
-                            u"Thank you." % (email, REQUEST['ACTUAL_URL'] +
-                            '/' + self.getRawId())
-                mail_text = message_from_string(mail_body.encode('utf-8'))
-                mail_text.set_charset('utf-8')
-                mail_text['X-Custom'] = Header(u'Some Custom Parameter',
-                                               'utf-8')
-                self.mail_host.send(
-                    mail_text, mto=group_email,
-                    mfrom=self.portal.getProperty('email_from_address'),
-                    subject='Approval Email', immediate=True)
-            except SMTPRecipientsRefused:
-                # Don't disclose email address on failure
-                raise SMTPRecipientsRefused(
-                    'Recipient address rejected by server')
+            # TODO Create approval email template
+            mail_body = u"There is a user %s waiting for approval. " \
+                        u"Please approve at %s . " \
+                        u"Thank you." % (email, REQUEST['ACTUAL_URL'] +
+                        '/' + self.getRawId())
+            send_email(mail_body,
+                       self.portal.getProperty('email_from_address'),
+                       group_email,
+                       'Approval Email')
+
             return
 
         # auto registration
@@ -384,6 +348,25 @@ def validate_password(password):
 
     return {'password': password, 'reset_password': reset_password,
             'fail_message': fail_message}
+
+
+def send_email(mail_body, mail_from, mail_to, subject):
+    # TODO instead of hard code email, changed to template
+    site = getSite()
+    mail_host = getToolByName(site, 'MailHost')
+    try:
+        mail_text = message_from_string(mail_body.encode('utf-8'))
+        mail_text.set_charset('utf-8')
+        mail_text['X-Custom'] = Header(u'Some Custom Parameter',
+                                       'utf-8')
+        mail_host.send(
+            mail_text, mto=mail_to,
+            mfrom=mail_from,
+            subject=subject, immediate=True)
+    except SMTPRecipientsRefused:
+        # Don't disclose email address on failure
+        raise SMTPRecipientsRefused(
+            'Recipient address rejected by server')
 
 
 registerATCT(SignUpAdapter, PROJECTNAME)
