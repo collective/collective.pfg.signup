@@ -237,16 +237,16 @@ class SignUpAdapter(FormActionAdapter):
 
     def sendApprovalEmail(self, data):
         """Send an approval request email"""
-        mail_host = getToolByName(site, 'MailHost')
+        mail_host = getToolByName(self, 'MailHost')
         # TODO Create waiting list email template
         mail_body = u"Your account is waiting for approval. " \
                     u"Thank you. "
         mail_text = message_from_string(mail_body.encode('utf-8'))
         mail_text.set_charset('utf-8')
         mail_text['X-Custom'] = Header(u'Some Custom Parameter', 'utf-8')
-        self.mail_host.send(mail_text, mto=data['email'],
-                            mfrom=self.portal.getProperty('email_from_address'),
-                            subject='Waiting for approval', immediate=True)
+        mail_host.send(mail_text, mto=data['email'],
+                       mfrom=self.portal.getProperty('email_from_address'),
+                       subject='Waiting for approval', immediate=True)
         return
 
                       
