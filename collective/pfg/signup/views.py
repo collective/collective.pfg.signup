@@ -3,7 +3,7 @@ from Products.Five import BrowserView
 from zope.interface import implements
 from zope.component import getMultiAdapter
 from Products.CMFCore.utils import getToolByName
-from adapter import create_member, validate_password, send_email
+from adapter import send_email
 import hashlib
 
 
@@ -15,51 +15,19 @@ class UserApproverView(BrowserView):
     def __init__(self, context, request):
         super(UserApproverView, self).__init__(context, request)
         print "UserApproverView: init"
-        self.results = {}
+        self.results = []
 
     def result_data(self):
-        results = {
-            "aaData": [
-                [
-                    "Trident",
-                    "Internet Explorer 4.0",
-                    "Win 95+",
-                    "4",
-                    "X",
-                    "<input type='checkbox' name='aCheckBox' value='aValue1' />"
-                ],
-                [
-                    "Trident",
-                    "Internet Explorer 5.0",
-                    "Win 95+",
-                    "5",
-                    "C",
-                    "<input type='checkbox' name='aCheckBox' value='aValue2' />"
-                ]
-            ]}
-        #return results['aaData']
-        print self.field_data
-        return self.field_data
+        # This needs to be a list of list, with the number of items in the list matching the number of columns
+        return self.results
 
     def result_columns(self):
-        results = {"aoColumns": [
-            { "sTitle": "Engine" },
-            { "sTitle": "Browser" },
-            { "sTitle": "Platform" },
-            { "sTitle": "Version", "sClass": "center" },
-            { "sTitle": "Grade", "sClass": "center" },
-            { "sTitle": "CheckBox", "sClass": "center" }
-        ],
-                   "aoColumn": [
-            "Engine",
-            "Browser",
-            "Platform",
-            "Version",
-            "Grade",
-            "CheckBox"
-        ]}
-        #return results['aoColumns']
-        print self.field_column
+        return [{ "sTitle": "User Name" },
+                { "sTitle": "Full Name" },
+                { "sTitle": "Email" },
+                { "sTitle": "Approve" },
+                { "sTitle": "Reject" },
+                ]
         return self.field_column
 
     def results(self):
@@ -70,13 +38,11 @@ class UserApproverView(BrowserView):
         # where the context itself is a portlet renderer and it's not on the
         # acquisition chain leading to the portal root.
         # If you are unsure what this means always use context.aq_inner
-        print "UserApproverView: call"
-        login = 'login'
         context = self.context.aq_inner
         portal_membership = getToolByName(context, 'portal_membership')
-        self.results = {}
         self.field_data = []
         self.field_column = []
+        results = []
 
         if portal_membership.isAnonymousUser():
             # Return target URL for the site anonymous visitors
@@ -86,39 +52,18 @@ class UserApproverView(BrowserView):
         portal_groups = getToolByName(context, 'portal_groups')
         user_groups = portal_groups.getGroupsByUserId(user_id)
 
-        #import ipdb; ipdb.set_trace()
-
-        waiting_by_approver = context.waiting_by_approver
-
-        # get the user approval list based on groups
-        for user_group in user_groups:
-            user_group_name = user_group.getName()
-            if user_group_name not in waiting_by_approver:
-                continue
-
-            #import ipdb; ipdb.set_trace()
-            self.results.update(waiting_by_approver[user_group_name])
-
-        is_first_item = True
-        for _, fields in self.results.items():
-
-            form_data = fields['form_data']
-            form_column = fields['form_column']
-
-            if is_first_item:
-                for column in form_column:
-                    self.field_column.append({"sTitle": column})
-                is_first_item = False
-
-            self.field_data.append(form_data)
-
-        # after user click the form button:
-        # - send out email to user for reject?
-        # - Create user and send out reset password email for approval.
-        # clear the data from the OOBTree.
-
+        for key, value in context.waiting_list.items():
+            # TODO: need to restrict by user group
+            link = self.context.absolute_url()
+            approve_button = '<a href="' + link + '/approve_user?userid=' + key + '">Approve button</a>'
+            reject_button = '<a href="' + link + '/reject_user?userid=' + key + '">Reject button</a>'
+            results.append([value['username'],
+                            value['fullname'],
+                            value['email'],
+                            approve_button,
+                            reject_button])
+        self.results = results
         return self.index()
-
 
 class UserManagementView(BrowserView):
     # TODO The form in user_management_view need to have Plone csrf protection
@@ -186,8 +131,7 @@ class UserManagementView(BrowserView):
             user_group_name = user_group.getName()
             if user_group_name not in context.waiting_by_approver:
                 continue
-
-            all_results = context.waiting_by_approver[user_group_name]
+            all_results = waiting_by_approver[user_group_name]
 
             for key in results:
 
@@ -199,21 +143,8 @@ class UserManagementView(BrowserView):
                 email = this_result['email']
 
                 if is_approve == 'approve':
-                    username = this_result['username']
-                    password = this_result['password']
-
-                    user_group = this_result['user_group']
-
-                    verified = validate_password(password)
-
-                    if verified['fail_message']:
-                        return verified['fail_message']
-
                     # create an account:
-                    create_member(self.request, username, verified['password'],
-                                  email, verified['reset_password'],
-                                  user_group)
-
+                    self.create_member(self.request, this_result, True, user_group)
                     del context.waiting_by_approver[user_group_name][key]
                 elif is_approve == 'reject':
                     # TODO: create reject email template

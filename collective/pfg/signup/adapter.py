@@ -1,3 +1,5 @@
+from persistent.list import PersistentList
+from persistent.mapping import PersistentMapping
 from zope.interface import implements
 from AccessControl import ClassSecurityInfo
 from Products.Archetypes import atapi
@@ -14,7 +16,6 @@ from Products.statusmessages.interfaces import IStatusMessage
 from Products.CMFCore.utils import getToolByName
 from zope.app.component.hooks import getSite
 from zope.component import getUtility
-from Products.CMFCore.interfaces import ISiteRoot
 from BTrees.OOBTree import OOBTree
 from encrypt import encode
 from smtplib import SMTPRecipientsRefused
@@ -136,45 +137,111 @@ class SignUpAdapter(FormActionAdapter):
     def onSuccess(self, fields, REQUEST=None):
         """Save form input."""
         # get username and password
+        portal_registration = getToolByName(self, 'portal_registration')
         fullname = None
         username = None
         email = None
         password = None
+        password_verify = None
 
-        approval_group = self.generate_group(REQUEST, self.approval_group_template)
+        #approval_group = self.generate_group(REQUEST, self.approval_group_template)
         user_group = self.generate_group(REQUEST, self.user_group_template)
 
+        data = {}
         for field in fields:
             fname = field.fgField.getName()
             val = REQUEST.form.get(fname, None)
             if fname == self.full_name_field:
-                fullname = val
+                data['fullname'] = val
             elif fname == self.username_field:
-                username = val
+                data['username'] = val
             elif fname == self.email_field:
-                email = val
+                data['email'] = val
             elif fname == self.password_field:
-                password = val
+                data['password'] = val
+        data['password_verify'] = REQUEST.form.get('password_verify', None)
 
-        # should we verify the two passwords are the same again?
+        role = REQUEST.form.get('role', None)
 
-        if email is None or user_group == "":
+        if data['email'] is None or user_group == "":
             # SignUpAdapter did not setup properly
-            return {FORM_ERROR_MARKER: 'Sign Up form is not setup properly.'}
+            return {FORM_ERROR_MARKER: _(u'Sign Up form is not setup properly.')}
 
-        if not username:
-            username = email
+        if not data['username']:
+            data['username'] = data['email']
 
+        # username validation
+        if data['username'] == self.site.getId():
+            return {FORM_ERROR_MARKER: _(u'You will need to signup again.'),
+                'username': _(u"This username is reserved. "
+                              u"Please choose a different name.")}
+
+        if not portal_registration.isMemberIdAllowed(data['username']):
+            return {FORM_ERROR_MARKER: _(u'You will need to signup again.'),
+                'username': _(u"The login name you selected is already "
+                              u"in use or is not valid. "
+                              u"Please choose another.")}
+
+        # TODO check waiting list for usernames
+
+        if role == 'auto':
+            result = self.autoRegister(REQUEST, data, user_group)
+            # Just return the result, this should either be None on success or an error message
+            return result
+
+        email_from = self.portal.getProperty('email_from_address')
+        if not portal_registration.isValidEmail(email_from):
+            return {FORM_ERROR_MARKER: _(u'Portal email is not configured.')}
+
+        if role == 'email':
+            result = self.emailRegister(REQUEST, data, user_group)
+            return result
+
+        if role == 'approval':
+            result = self.approvalRegister(REQUEST, data, user_group)
+            return result
+
+        # If we get here, then no role was selected
+        return {FORM_ERROR_MARKER: _(u'Please select a role'),
+                'role': _(u'Please select a role')}
+
+    def approvalRegister(self, REQUEST, data, user_group):
+        """User type requires approval,
+        so store them on the approval list"""
+        # make sure password fields are empty
+        data['password'] = ''
+        data['password_verify'] = ''
+        self.waiting_list[data['username']] = data
+
+        # need an email address for the approvers group
+        administrators = self.portal_groups.getGroupById('Administrators')
+        administrators_email = administrators.getProperty('email')
+        if not administrators_email:
+            administrators_email = self.portal.getProperty('email_from_address')
+        try:
+            self.sendApprovalEmail(data)
+        except SMTPRecipientsRefused:
+            # Don't disclose email address on failure
+            raise SMTPRecipientsRefused('Recipient address rejected by server')
+
+    def sendApprovalEmail(self, data):
+        """Send an approval request email"""
+        # TODO Create waiting list email template
+        mail_body = u"Your account is waiting for approval. " \
+                    u"Thank you. "
+        mail_text = message_from_string(mail_body.encode('utf-8'))
+        mail_text.set_charset('utf-8')
+        mail_text['X-Custom'] = Header(u'Some Custom Parameter', 'utf-8')
+        self.mail_host.send(mail_text, mto=data['email'],
+                            mfrom=self.portal.getProperty('email_from_address'),
+                            subject='Waiting for approval', immediate=True)
+        return
+
+                      
+    def groupEmail(self, data):
+        # TODO not sure if this is required
         if approval_group:
-            #should use hash the same way as plone if want to store password
-            if password:
-                secret_password = encode(self.SECRET_KEY, password)
-            else:
-                secret_password = password
-
-            # just email is enough?
-            key_id = encode(self.SECRET_KEY, email)
-            key_hash = hashlib.sha224(key_id).hexdigest()
+            #approval don't need password, as they should get reset email
 
             full_form_data = REQUEST.form
             #form_column = ['key_id']
@@ -256,99 +323,105 @@ class SignUpAdapter(FormActionAdapter):
 
             return
 
-        # auto registration
-        # username validation
-        if username == self.site.getId():
-            return {FORM_ERROR_MARKER: 'You will need to signup again.',
-                    'username': _(u"This username is reserved. "
-                                  u"Please choose a different name.")}
+    def emailRegister(self, REQUEST, data, user_group):
+        """User type should be authenticated by email,
+        so randomize their password and send a password reset"""
+        portal_registration = getToolByName(self, 'portal_registration')
+        data['password'] = portal_registration.generatePassword()
+        result = self.create_member(REQUEST, data, True, user_group)
+        return result
 
-        if not self.registration.isMemberIdAllowed(username):
-            return {FORM_ERROR_MARKER: 'You will need to signup again.',
-                    'username': _(u"The login name you selected is already "
-                                  u"in use or is not valid. "
-                                  u"Please choose another.")}
+    def autoRegister(self, REQUEST, data, user_group):
+        """User type can be auto registered, so pass them through"""
+        verified = self.validate_password(data)
+        if verified:
+            return verified
 
-        verified = validate_password(password)
+        # This is a bad idea, if anon is filling in the form they will get a permission error
+        #if not user_group in self.portal_groups.getGroupIds():
+            #self.portal_groups.addGroup(user_group)
 
-        if verified['fail_message']:
-            return verified['fail_message']
+        # shouldn't store this in the pfg, as once the user is created, we shouldn't care
+        result = self.create_member(REQUEST, data, False, user_group)
+        return result
 
-        if not user_group in self.portal_groups.getGroupIds():
-            self.portal_groups.addGroup(user_group)
+    def create_member(self, request, data, reset_password, user_group):
+        portal_membership = getToolByName(self, 'portal_membership')
+        portal_registration = getToolByName(self, 'portal_registration')
+        portal_groups = getToolByName(self, 'portal_groups')
+        username = data['username']
 
-        create_member(REQUEST, username, verified['password'], email,
-                      verified['reset_password'], user_group)
+        try:
+            member = portal_membership.getMemberById(username)
 
-        return
+            if member is None:
+                # need to also pass username in properties, otherwise the user isn't found
+                # when setting the properties
+                member = portal_registration.addMember(
+                    username, data['password'], [],
+                    properties={'username': username,
+                                'fullname': data['fullname'],
+                                'email': data['email']})
 
+            if not user_group in portal_groups.getGroupIds():
+                portal_groups.addGroup(user_group)
 
-def create_member(request, username, password, email, reset_password,
-                  user_group):
-    site = getSite()
-    portal_membership = getToolByName(site, 'portal_membership')
-    portal_registration = getToolByName(site, 'portal_registration')
-    portal_groups = getToolByName(site, 'portal_groups')
+            portal_groups.addPrincipalToGroup(member.getUserName(),
+                                              user_group)
 
-    try:
-        member = portal_membership.getMemberById(username)
+            if reset_password:
+                # send out reset password email
+                portal_registration.mailPassword(username, request)
 
-        if member is None:
-            member = portal_registration.addMember(
-                username, password,
-                properties={'username': username,
-                            'email': email})
+        except(AttributeError, ValueError), err:
+            logging.exception(err)
+            return {FORM_ERROR_MARKER: err}
 
-        if not user_group in portal_groups.getGroupIds():
-            portal_groups.addGroup(user_group)
+    def validate_password(self, data):
+        errors = {}
+        if not data['password']:
+            errors['password'] = _(u'Please enter a password')
+        if not data['password_verify']:
+            errors['password_verify'] = _(u'Please enter a password')
+        if errors:
+            errors[FORM_ERROR_MARKER] = _(u'Please enter a password')
+            return errors
+        if data['password'] != data['password_verify']:
+            errors[FORM_ERROR_MARKER] = _(u'The passwords do not match')
+            errors['password'] = _(u'The passwords do not match')
+            errors['password_verify'] = _(u'The passwords do not match')
+            return errors
 
-        portal_groups.addPrincipalToGroup(member.getUserName(),
-                                          user_group)
+        registration = getToolByName(self, 'portal_registration')
+        # This should ensure that the password is at least 5 chars long, but
+        # if the user filling in the form has ManagePortal permission it is ignored
+        error_message = registration.testPasswordValidity(data['password'])
+        if error_message:
+            errors[FORM_ERROR_MARKER] = error_message
+            errors['password'] = ' '
+            errors['password_verify'] = ' '
+            return errors
+        return None
 
-        if member.has_role('Member'):
-            site.acl_users.portal_role_manager.removeRoleFromPrincipal(
-                'Member', member.getUserName())
+    def approve_user(self):
+        """Approve the user based on the request"""
+        # TODO: Check user has permissions and is in right group to approve the user
+        request = self.REQUEST
+        portal_registration = getToolByName(self, 'portal_registration')
+        userid = request.form['userid']
+        user = self.waiting_list.pop(userid)
+        user['password'] = portal_registration.generatePassword()
+        user_group = self.generate_group(request, self.user_group_template)
+        self.create_member(request, user, True, user_group)
+        request.RESPONSE.redirect(self.absolute_url())
 
-        if reset_password:
-            # send out reset password email
-            portal_registration.mailPassword(username, request)
-
-    except(AttributeError, ValueError), err:
-        logging.exception(err)
-        IStatusMessage(request).addStatusMessage(err, type="error")
-        return
-
-
-def validate_password(password):
-    site = getSite()
-    registration = getToolByName(site, 'portal_registration')
-    reset_password = False
-    fail_message = None
-
-    if password:
-        failMessage = registration.testPasswordValidity(password)
-        if failMessage is not None:
-            fail_message = {FORM_ERROR_MARKER: 'You will need to signup again.',
-                            'password': failMessage}
-
-        # do the registration
-        # Should based on turn on self-registration flag?
-        #refer to plone.app.users/browser/register.py
-        # data = {'username': 'user3', 'fullname': u'User3',
-        # 'password': u'qwert', 'email': 'user3@mail.com',
-        # 'password_ctl': u'qwert'}
-        if isinstance(password, unicode):
-            password = password.encode('utf8')
-
-    else:
-        # generate random string and
-        # set send out reset password email flag
-        password = registration.generatePassword()
-        reset_password = True
-
-    return {'password': password, 'reset_password': reset_password,
-            'fail_message': fail_message}
-
+    def reject_user(self):
+        """Reject the user based on the request"""
+        # TODO: Check user has permissions and is in right group to approve the user
+        request = self.REQUEST
+        userid = request.form['userid']
+        user = self.waiting_list.pop(userid)
+        request.RESPONSE.redirect(self.absolute_url())
 
 def send_email(mail_body, mail_from, mail_to, subject):
     # TODO instead of hard code email, changed to template
