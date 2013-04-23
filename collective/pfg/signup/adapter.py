@@ -134,6 +134,15 @@ class SignUpAdapter(FormActionAdapter):
         print template
         return template
 
+    def getRoles(self):
+        # TODO these should be gathered from configuration in the form
+        # there are three kinds of roles, auto, email and approve
+        roles = {}
+        roles['auto'] = []
+        roles['email'] = []
+        roles['approval'] = ['inspector', 'helpdesk', 'manager', 'frontdesk']
+        return roles
+
     def onSuccess(self, fields, REQUEST=None):
         """Save form input."""
         # get username and password
@@ -184,7 +193,9 @@ class SignUpAdapter(FormActionAdapter):
 
         # TODO check waiting list for usernames
 
-        if role == 'auto':
+        roles = self.getRoles()
+
+        if role in roles['auto']:
             result = self.autoRegister(REQUEST, data, user_group)
             # Just return the result, this should either be None on success or an error message
             return result
@@ -193,11 +204,11 @@ class SignUpAdapter(FormActionAdapter):
         if not portal_registration.isValidEmail(email_from):
             return {FORM_ERROR_MARKER: _(u'Portal email is not configured.')}
 
-        if role == 'email':
+        if role in roles['email']:
             result = self.emailRegister(REQUEST, data, user_group)
             return result
 
-        if role == 'approval':
+        if role in roles['approval']:
             result = self.approvalRegister(REQUEST, data, user_group)
             return result
 
@@ -226,6 +237,7 @@ class SignUpAdapter(FormActionAdapter):
 
     def sendApprovalEmail(self, data):
         """Send an approval request email"""
+        mail_host = getToolByName(site, 'MailHost')
         # TODO Create waiting list email template
         mail_body = u"Your account is waiting for approval. " \
                     u"Thank you. "
