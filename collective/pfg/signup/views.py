@@ -72,7 +72,7 @@ class UserManagementView(BrowserView):
     # redirect in the view is right way to do it?
     # TODO: Browser view need to have custom permission that only able to view
     # by Authenticated user. For now, it is public.
-    index = ViewPageTemplateFile("templates/user_management_view.pt")
+    index = ViewPageTemplateFile("templates/user_approver_view.pt")
 
     def __init__(self, context, request):
         super(UserManagementView, self).__init__(context, request)
