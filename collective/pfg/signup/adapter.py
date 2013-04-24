@@ -169,9 +169,13 @@ class SignUpAdapter(FormActionAdapter):
     def getRoles(self):
         """there are three kinds of roles, auto, email and approve"""
         roles = {}
-        roles['auto'] = self.getAuto_roles()
-        roles['email'] = self.getEmail_roles()
-        roles['approval'] = self.getApproval_roles()
+        roles['auto'] = list(self.getAuto_roles())
+        roles['email'] = list(self.getEmail_roles())
+        roles['approval'] = list(self.getApproval_roles())
+        for key in roles.keys():
+            for i in range(len(roles[key])):
+                roles[key][i] = roles[key][i].lower()
+                roles[key][i] = roles[key][i].replace(' ', '')
         return roles
 
     def getRolesVocab(self):
@@ -182,7 +186,6 @@ class SignUpAdapter(FormActionAdapter):
             key = role.lower()
             key = key.replace(' ', '')
             roles.append([key, role])
-        print roles
         return roles
 
     def onSuccess(self, fields, REQUEST=None):
