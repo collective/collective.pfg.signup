@@ -20,60 +20,29 @@
                 jQuery(function($) {
                     var oTable;
 
-                    $('#dynamicForm').submit( function() {
+                    $('#usermanagement').submit( function() {
 		                return false;
                     });
-                    $('#dynamicForm .submit_approve').click( function() {
-		                var sData = oTable.$('input').serialize();
-		                alert('The following data would have been submitted to the server: \n\n'+sData );
-		                $.post($('#dynamicForm').attr('action'), {
-		                    'results': sData,
-		                    'submit': $(this).attr('value')
-		                });
-		                window.location.href = '${redirectUrl}';
-                    });
-                    $('#dynamicForm .submit_reject').click( function() {
-		                var sData = oTable.$('input').serialize();
-		                alert('The following data would have been submitted to the server: \n\n'+sData );
-		                $.post($('#dynamicForm').attr('action'), {
-		                    'results': sData,
-		                    'submit': $(this).attr('value')
-		                });
-		                window.location.href = '${redirectUrl}';
-                    });
-
-
                     /* Data set - can contain whatever information you want */
                     oTable = $('#example').dataTable( {
                     'aaData': ${aaData},
                     'aoColumns' : ${aoColumns}
                     } );
-
                 });
             }">
         </script>
     </metal:javascript_head>
 
-    <body >
+    <body>
 
-        <metal:core fill-slot="content-core"
-                    tal:define="form python:view.context;
-                                postUrl python:view.context.absolute_url()+'/user_management_view';">
-            <div class="message">
-                <p class="results" tal:content="view/results">Results</p>
-            </div>
+        <metal:core fill-slot="content-core">
             <div id="dynamic">
-                <form id="dynamicForm" action="" method="post"
-                      tal:attributes="action postUrl">
-                <div style="text-align:right; padding-bottom:1em;">
-                    <button type="submit" class="submit_approve" name="submit" value="approve">Approve</button>
-                    <button type="submit" class="submit_reject" name="submit" value="reject">Reject</button>
-                </div>
+                <form id="usermanagement" method="post"
+                      tal:attributes="action context/absolute_url">
                 <table cellpadding="0"
                        cellspacing="0"
                        border="0" class="display" id="example">
-
-                       </table>
+                </table>
                 </form>
             </div>
         </metal:core>
