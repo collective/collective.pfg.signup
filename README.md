@@ -7,6 +7,14 @@ Introduction
 ============
 
 Create flexible user registration forms using PloneFormGen.
+
+The problem it is trying to solve is
+
+ - having customisable user registration forms
+ - having registration forms just for certain areas of the site
+ - user approval workflow
+ - collecting other information about users who signup
+
 A PloneFormGen save adapter that takes details form the submitted form and uses them to add a user to Plone.
 Can be configured put the user in a predefined group. Can be configued to allow
 members of a group to approve the user before they are added. The destination group or the group of approvers can 
@@ -42,3 +50,9 @@ For example in the example above, "approver group id template" = "Members_${orga
 would have to create
 groups such "Members_APPLE_approvers" which you can add members who would be sent notifications so they can approve or
 reject users signing up to joing the group "Members_APPLE".
+
+If you want to store or do other actions with the information entered into a signup form then you can configure an
+additional PFG save action adapter. Instead of directly activating that on the form, in the signup adapter configure it
+as the "approved save action adapter" and this adapter will be activated only once the user has finally been approved.
+You can use this with a scriptable adapter for example to do scriptable actions on user approval.
+
