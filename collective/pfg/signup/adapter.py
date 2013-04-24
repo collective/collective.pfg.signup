@@ -409,27 +409,28 @@ class SignUpAdapter(FormActionAdapter):
         username = data['username']
 
         self.create_group(user_group)
-
-        try:
-            member = portal_membership.getMemberById(username)
-
-            if member is None:
-                # need to also pass username in properties, otherwise the user isn't found
-                # when setting the properties
+        # need to recheck the member has not been created in the meantime
+        member = portal_membership.getMemberById(username)
+        if member is None:
+            # need to also pass username in properties, otherwise the user isn't found
+            # when setting the properties
+            try:
                 member = portal_registration.addMember(
                     username, data['password'], [],
                     properties={'username': username,
                                 'fullname': data['fullname'],
                                 'email': data['email']})
+            except(AttributeError, ValueError), err:
+                logging.exception(err)
+                return {FORM_ERROR_MARKER: err}
 
             #portal_groups.addPrincipalToGroup(member.getUserName(), user_group)
             if reset_password:
                 # send out reset password email
                 portal_registration.mailPassword(username, request)
 
-        except(AttributeError, ValueError), err:
-            logging.exception(err)
-            return {FORM_ERROR_MARKER: err}
+        else:
+            return {FORM_ERROR_MARKER: "This user already exists"}
 
     def create_group(self, user_group, title=None, email=None):
         """Create the group"""
