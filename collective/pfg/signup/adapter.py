@@ -408,6 +408,8 @@ class SignUpAdapter(FormActionAdapter):
         portal_groups = getToolByName(self, 'portal_groups')
         username = data['username']
 
+        self.create_group(user_group)
+
         try:
             member = portal_membership.getMemberById(username)
 
@@ -420,12 +422,7 @@ class SignUpAdapter(FormActionAdapter):
                                 'fullname': data['fullname'],
                                 'email': data['email']})
 
-            if not user_group in portal_groups.getGroupIds():
-                portal_groups.addGroup(user_group)
-
-            portal_groups.addPrincipalToGroup(member.getUserName(),
-                                              user_group)
-
+            #portal_groups.addPrincipalToGroup(member.getUserName(), user_group)
             if reset_password:
                 # send out reset password email
                 portal_registration.mailPassword(username, request)
@@ -433,6 +430,22 @@ class SignUpAdapter(FormActionAdapter):
         except(AttributeError, ValueError), err:
             logging.exception(err)
             return {FORM_ERROR_MARKER: err}
+
+    def create_group(self, user_group, title=None, email=None):
+        """Create the group"""
+        # This raises an error, as setGroupProperties does not yet exist on the group
+        portal_groups = getToolByName(self, 'portal_groups')
+        properties = {}
+        if title is not None:
+            properties['title'] = title
+        if email is not None:
+            properties['email'] = email
+        if not user_group in portal_groups.getGroupIds():
+            try:
+                portal_groups.addGroup(user_group, properties=properties)
+            except AttributeError:
+                pass
+            #portal_groups.editGroup(user_group, properties=properties)
 
     def validate_password(self, data):
         errors = {}
