@@ -1,11 +1,6 @@
+from Products.CMFCore.utils import getToolByName
 from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
 from Products.Five import BrowserView
-from zope.interface import implements
-from zope.component import getMultiAdapter
-from Products.CMFCore.utils import getToolByName
-from adapter import send_email
-import hashlib
-
 
 class UserApproverView(BrowserView):
     # TODO: Browser view need to have custom permission that only able to view
@@ -29,7 +24,6 @@ class UserApproverView(BrowserView):
                 { "sTitle": "Approve" },
                 { "sTitle": "Reject" },
                 ]
-        return self.field_column
 
     def results(self):
         return self.results
@@ -41,20 +35,18 @@ class UserApproverView(BrowserView):
         # If you are unsure what this means always use context.aq_inner
         context = self.context.aq_inner
         portal_membership = getToolByName(context, 'portal_membership')
-        self.field_data = []
-        self.field_column = []
         results = []
 
         if portal_membership.isAnonymousUser():
             # Return target URL for the site anonymous visitors
             return context.restrictedTraverse('login')()
 
-        user_id = portal_membership.getAuthenticatedMember().getId()
-        portal_groups = getToolByName(context, 'portal_groups')
-        user_groups = portal_groups.getGroupsByUserId(user_id)
+        current_user = portal_membership.getAuthenticatedMember()
+        user_groups = current_user.getGroups()
 
         for key, value in context.waiting_list.items():
-            # TODO: need to restrict by user group
+            if value['approval_group'] not in user_groups:
+                continue
             link = self.context.absolute_url()
             approve_button = '<a href="' + link + '/approve_user?userid=' + key + '">Approve button</a>'
             reject_button = '<a href="' + link + '/reject_user?userid=' + key + '">Reject button</a>'
