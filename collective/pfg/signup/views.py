@@ -19,7 +19,6 @@ class UserApproverView(BrowserView):
         return [{ "sTitle": "User Name" },
                 { "sTitle": "Full Name" },
                 { "sTitle": "Group" },
-                { "sTitle": "Approved By" },
                 { "sTitle": "Email" },
                 { "sTitle": "Approve" },
                 { "sTitle": "Reject" },
@@ -53,7 +52,6 @@ class UserApproverView(BrowserView):
             results.append([value['username'],
                             value['fullname'],
                             value['user_group'],
-                            value['approval_group'],
                             value['email'],
                             approve_button,
                             reject_button])
