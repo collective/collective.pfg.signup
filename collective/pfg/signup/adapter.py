@@ -198,7 +198,7 @@ class SignUpAdapter(FormActionAdapter):
         policy = self.getPolicy(data)
 
         if policy == 'auto':
-            result = self.autoRegister(REQUEST, data)
+            result = self.autoRegister(data)
             # Just return the result, this should either be None on success or an error message
             return result
 
@@ -207,38 +207,51 @@ class SignUpAdapter(FormActionAdapter):
             return {FORM_ERROR_MARKER: _(u'Portal email is not configured.')}
 
         if policy == 'email':
-            result = self.emailRegister(REQUEST, data)
+            result = self.emailRegister(data)
             return result
 
         if policy == 'approve':
-            result = self.approvalRegister(REQUEST, data)
+            result = self.approvalRegister(data)
             return result
 
         # If we get here, then something went wrong
         return {FORM_ERROR_MARKER: _(u'The form is currently unavailable')}
 
-    def approvalRegister(self, REQUEST, data):
+    def approvalRegister(self, data):
         """User type requires approval,
         so store them on the approval list"""
+        portal_groups = getToolByName(self, 'portal_groups')
         # make sure password fields are empty
         data['password'] = ''
         data['password_verify'] = ''
         self.waiting_list[data['username']] = data
 
         # need an email address for the approvers group
+        approval_group = portal_groups.getGroupById(data['approval_group'])
+        if approval_group is None:
+            self.approval_group_problem(data)
+        approval_email = approval_group.getProperty('email')
+        if not approval_email:
+            self.approval_group_problem(data)
+        self.sendApprovalEmail(data)
+
+    def approval_group_problem(self, data):
+        """There is a problem with the approval group so alert someone"""
+        # TODO Create waiting list email template
         administrators = self.portal_groups.getGroupById('Administrators')
         administrators_email = administrators.getProperty('email')
         if not administrators_email:
             administrators_email = self.portal.getProperty('email_from_address')
-        self.sendApprovalEmail(data)
+        # TODO adding group to email would be useful
+        messageText = u"""There is a problem with one of the approval groups."""
+        self.send_email(messageText, mto=administrators_email, mfrom=self.portal.getProperty('email_from_address'), subject='Approval group problem')
 
     def sendApprovalEmail(self, data):
         """Send an approval request email"""
         # TODO Create waiting list email template
-        mail_body = u"Your account is waiting for approval. " \
+        messageText = u"Your account is waiting for approval. " \
                     u"Thank you. "
-        mail_text = message_from_string(mail_body.encode('utf-8'))
-        self.send_mail(mail_body, self.portal.getProperty('email_from_address'), mto=data['email'], subject='Waiting for approval')
+        self.send_email(messageText, mto=data['email'], mfrom=self.portal.getProperty('email_from_address'), subject='Waiting for approval')
         return
 
     def emailRegister(self, REQUEST, data):
@@ -373,17 +386,17 @@ class SignUpAdapter(FormActionAdapter):
             self.REQUEST.RESPONSE.redirect(self.absolute_url())
             return True
 
-    def send_email(self, mail_body, mail_from, mail_to, subject):
+    def send_email(self, messageText, mto, mfrom, subject):
         # TODO instead of hard code email, changed to template
         mail_host = getToolByName(self, 'MailHost')
         try:
-            mail_text = message_from_string(mail_body.encode('utf-8'))
-            mail_text.set_charset('utf-8')
-            mail_text['X-Custom'] = Header(u'Some Custom Parameter', 'utf-8')
+            messageText = message_from_string(messageText.encode('utf-8'))
+            messageText.set_charset('utf-8')
+            messageText['X-Custom'] = Header(u'Some Custom Parameter', 'utf-8')
             mail_host.send(
-                mail_text, mto=mail_to,
-                mfrom=mail_from,
-                subject=subject, immediate=True)
+                messageText, mto=mto,
+                mfrom=mfrom,
+                subject=subject)
         except SMTPRecipientsRefused:
             # Don't disclose email address on failure
             raise SMTPRecipientsRefused(
