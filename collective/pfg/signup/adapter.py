@@ -92,38 +92,6 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
                                       u"eg ${council}_${role}_approver."),
                       ),
                       ),
-    atapi.LinesField('auto_roles',
-                      widget=atapi.LinesWidget(
-                          label=_(u'label_auto_roles',
-                              default=u'Automatic Roles'),
-                          description=_(u'help_auto_roles',
-                              default=u"""These are the roles that will be
-                                      automatically signed up as users, and
-                                      require the user to create a password."""),
-                      ),
-                      ),
-    atapi.LinesField('email_roles',
-                      widget=atapi.LinesWidget(
-                          label=_(u'label_email_roles',
-                              default=u'Email Roles'),
-                          description=_(u'help_email_roles',
-                              default=u"""These are the roles that will confirm
-                                  the user's email address by sending a password
-                                  reset email before the user can login."""),
-                      ),
-                      ),
-    atapi.LinesField('approval_roles',
-                      widget=atapi.LinesWidget(
-                          label=_(u'label_approval_roles',
-                              default=u'Approval Roles'),
-                          description=_(u'help_approval_roles',
-                              default=u"""These are the roles that will go
-                                  through the apporval process. An account will
-                                  not be created until they are approved, and
-                                  a password reset email will be generated when
-                                  they are approved."""),
-                      ),
-                      ),
 ))
 
 
@@ -166,27 +134,16 @@ class SignUpAdapter(FormActionAdapter):
         print template
         return template
 
-    def getRoles(self):
-        """there are three kinds of roles, auto, email and approve"""
-        roles = {}
-        roles['auto'] = list(self.getAuto_roles())
-        roles['email'] = list(self.getEmail_roles())
-        roles['approval'] = list(self.getApproval_roles())
-        for key in roles.keys():
-            for i in range(len(roles[key])):
-                roles[key][i] = roles[key][i].lower()
-                roles[key][i] = roles[key][i].replace(' ', '')
-        return roles
-
-    def getRolesVocab(self):
-        """Build the vocab for the roles field, this will be passed to DisplayList"""
-        roles = []
-        roles_list = self.getAuto_roles() + self.getEmail_roles() + self.getApproval_roles()
-        for role in roles_list:
-            key = role.lower()
-            key = key.replace(' ', '')
-            roles.append([key, role])
-        return roles
+    def getPolicy(self):
+        """Get the policy for how the signup adapter should treat the user.
+            auto: automatically create the user, requires a password to be set within the form.
+            email: send the user a password reset to verify the user's email address.
+            approve: hold the user in a list waiting for approval from the approval group"""
+        if self.getApproval_group_template():
+            return 'approve'
+        if self.getPassword_field():
+            return 'email'
+        return 'auto'
 
     def onSuccess(self, fields, REQUEST=None):
         """Save form input."""
@@ -215,8 +172,6 @@ class SignUpAdapter(FormActionAdapter):
                 data['password'] = val
         data['password_verify'] = REQUEST.form.get('password_verify', None)
 
-        role = REQUEST.form.get('role', None)
-
         if data['email'] is None or user_group == "":
             # SignUpAdapter did not setup properly
             return {FORM_ERROR_MARKER: _(u'Sign Up form is not setup properly.')}
@@ -238,9 +193,9 @@ class SignUpAdapter(FormActionAdapter):
 
         # TODO check waiting list for usernames
 
-        roles = self.getRoles()
+        policy = self.getPolicy()
 
-        if role in roles['auto']:
+        if policy == 'auto':
             result = self.autoRegister(REQUEST, data, user_group)
             # Just return the result, this should either be None on success or an error message
             return result
@@ -249,17 +204,16 @@ class SignUpAdapter(FormActionAdapter):
         if not portal_registration.isValidEmail(email_from):
             return {FORM_ERROR_MARKER: _(u'Portal email is not configured.')}
 
-        if role in roles['email']:
+        if policy == 'email':
             result = self.emailRegister(REQUEST, data, user_group)
             return result
 
-        if role in roles['approval']:
+        if policy == 'approve':
             result = self.approvalRegister(REQUEST, data, user_group)
             return result
 
-        # If we get here, then no role was selected
-        return {FORM_ERROR_MARKER: _(u'Please select a role'),
-                'role': _(u'Please select a role')}
+        # If we get here, then something went wrong
+        return {FORM_ERROR_MARKER: _(u'The form is currently unavailable')}
 
     def approvalRegister(self, REQUEST, data, user_group):
         """User type requires approval,
