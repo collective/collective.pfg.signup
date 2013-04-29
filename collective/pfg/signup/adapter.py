@@ -230,112 +230,16 @@ class SignUpAdapter(FormActionAdapter):
         administrators_email = administrators.getProperty('email')
         if not administrators_email:
             administrators_email = self.portal.getProperty('email_from_address')
-        try:
-            self.sendApprovalEmail(data)
-        except SMTPRecipientsRefused:
-            # Don't disclose email address on failure
-            raise SMTPRecipientsRefused('Recipient address rejected by server')
+        self.sendApprovalEmail(data)
 
     def sendApprovalEmail(self, data):
         """Send an approval request email"""
-        mail_host = getToolByName(self, 'MailHost')
         # TODO Create waiting list email template
         mail_body = u"Your account is waiting for approval. " \
                     u"Thank you. "
         mail_text = message_from_string(mail_body.encode('utf-8'))
-        mail_text.set_charset('utf-8')
-        mail_text['X-Custom'] = Header(u'Some Custom Parameter', 'utf-8')
-        mail_host.send(mail_text, mto=data['email'],
-                       mfrom=self.portal.getProperty('email_from_address'),
-                       subject='Waiting for approval', immediate=True)
+        self.send_mail(mail_body, self.portal.getProperty('email_from_address'), mto=data['email'], subject='Waiting for approval')
         return
-
-"""                      
-    def groupEmail(self, data):
-        # TODO not sure if this is required
-        if approval_group:
-            #approval don't need password, as they should get reset email
-
-            full_form_data = REQUEST.form
-            #form_column = ['key_id']
-            #form_data = [key_id]
-            form_column = ["approve"]
-            approve_string = "<input type='checkbox' name='{0}' value='1' />".\
-                format(key_hash)
-            form_data = [approve_string]
-
-            for key, value in full_form_data.items():
-                if key not in self.excluded_field:
-                    form_column.append(key)
-                    form_data.append(value)
-
-            record = {'fullname': fullname, 'username': username,
-                      'email': email, 'full_form_data': full_form_data,
-                      'form_column': form_column, 'form_data': form_data,
-                      'password': secret_password, 'key_hash': key_hash,
-                      'user_group': user_group,
-                      'approval_group': approval_group}
-            self.waiting_list[key_hash] = key_id
-            if approval_group not in self.waiting_by_approver:
-                self.waiting_by_approver[approval_group] = {}
-
-            self.waiting_by_approver[approval_group].update({key_id: record})
-            #print "%s: %s" % (key_id, record)
-
-            administrators = self.portal_groups.getGroupById('Administrators')
-            administrators_email = administrators.getProperty('email')
-            if not administrators_email:
-                administrators_email = self.portal.getProperty(
-                    'email_from_address')
-
-            if approval_group:
-                # TODO Create waiting list email template
-                mail_body = u"Your account is waiting for approval. " \
-                            u"Thank you. "
-                send_email(mail_body,
-                           self.portal.getProperty('email_from_address'),
-                           email,
-                           'Waiting for approval')
-                return
-
-            # find the email from group and send out the email
-            if not approval_group in self.portal_groups.getGroupIds():
-                #self.portal_groups.addGroup(approval_group)
-                # Raise unknown 'new group' and no email, should not happen
-                # TODO Create no existing group email template
-                mail_body = u"There is a new group called %s waiting to" \
-                            u" create. " % approval_group
-                send_email(mail_body,
-                           self.portal.getProperty('email_from_address'),
-                           administrators_email,
-                           'New Group Email')
-                return
-
-            # else
-            group = self.portal_groups.getGroupById(approval_group)
-            group_email = group.getProperty('email')
-            if not group_email:
-                # TODO Create no approval group email template
-                mail_body = u"There is a user group %s does not have " \
-                            u"email. Thank you." % approval_group
-                send_email(mail_body,
-                           self.portal.getProperty('email_from_address'),
-                           administrators_email,
-                           'Approval Email')
-                return
-
-            # TODO Create approval email template
-            mail_body = u"There is a user %s waiting for approval. " \
-                        u"Please approve at %s . " \
-                        u"Thank you." % (email, REQUEST['ACTUAL_URL'] +
-                        '/' + self.getRawId())
-            send_email(mail_body,
-                       self.portal.getProperty('email_from_address'),
-                       group_email,
-                       'Approval Email')
-
-            return
-"""
 
     def emailRegister(self, REQUEST, data):
         """User type should be authenticated by email,
