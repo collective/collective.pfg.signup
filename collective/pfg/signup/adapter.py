@@ -364,6 +364,7 @@ class SignUpAdapter(FormActionAdapter):
         portal_groups = getToolByName(self, 'portal_groups')
         username = data['username']
 
+        # TODO: add switch to prevent groups being created on the fly
         user_group = data['user_group']
         self.create_group(user_group)
         # need to recheck the member has not been created in the meantime
@@ -433,22 +434,39 @@ class SignUpAdapter(FormActionAdapter):
 
     def approve_user(self):
         """Approve the user based on the request"""
-        # TODO: Check user has permissions and is in right group to approve the user
         request = self.REQUEST
         portal_registration = getToolByName(self, 'portal_registration')
         userid = request.form['userid']
-        user = self.waiting_list.pop(userid)
+        user = self.waiting_list.get(userid)
+        if self.user_not_permitted(user['approval_group']):
+            return
         user['password'] = portal_registration.generatePassword()
         self.create_member(request, user, True)
+        self.waiting_list.remove(userid)
+        self.plone_utils.addPortalMessage(_(u'User has been approved.'))
         request.RESPONSE.redirect(self.absolute_url())
 
     def reject_user(self):
         """Reject the user based on the request"""
-        # TODO: Check user has permissions and is in right group to approve the user
         request = self.REQUEST
+        portal_registration = getToolByName(self, 'portal_registration')
         userid = request.form['userid']
-        user = self.waiting_list.pop(userid)
+        user = self.waiting_list.get(userid)
+        if self.user_not_permitted(user['approval_group']):
+            return
+        self.waiting_list.remove(userid)
+        self.plone_utils.addPortalMessage(_(u'User has been rejected.'))
         request.RESPONSE.redirect(self.absolute_url())
+
+    def user_not_permitted(self, group):
+        """Check the user is permmited to approve/reject the user"""
+        portal_membership = getToolByName(self, 'portal_membership')
+        current_user = portal_membership.getAuthenticatedMember()
+        current_user_groups = current_user.getGroups()
+        if group not in current_user_groups:
+            self.plone_utils.addPortalMessage(_(u'You do not have permission to do this.'))
+            self.REQUEST.RESPONSE.redirect(self.absolute_url())
+            return True
 
 def send_email(mail_body, mail_from, mail_to, subject):
     # TODO instead of hard code email, changed to template
