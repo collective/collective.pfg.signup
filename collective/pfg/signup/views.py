@@ -34,6 +34,7 @@ class UserApproverView(BrowserView):
         # If you are unsure what this means always use context.aq_inner
         context = self.context.aq_inner
         portal_membership = getToolByName(context, 'portal_membership')
+        portal_groups = getToolByName(context, 'portal_groups')
         results = []
 
         if portal_membership.isAnonymousUser():
@@ -46,12 +47,20 @@ class UserApproverView(BrowserView):
         for key, value in context.waiting_list.items():
             if value['approval_group'] not in user_groups:
                 continue
+            user_group = portal_groups.getGroupById(value['user_group'])
+            if user_group is not None:
+                group_name = user_group.getProperty('title')
+                if not group_name:
+                    group_name = value['user_group']
+            else:
+                # group may not yet exist
+                group_name = value['user_group']
             link = self.context.absolute_url()
             approve_button = '<a href="' + link + '/approve_user?userid=' + key + '">Approve button</a>'
             reject_button = '<a href="' + link + '/reject_user?userid=' + key + '">Reject button</a>'
             results.append([value['username'],
                             value['fullname'],
-                            value['user_group'],
+                            group_name,
                             value['email'],
                             approve_button,
                             reject_button])
