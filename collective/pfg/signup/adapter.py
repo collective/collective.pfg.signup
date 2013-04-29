@@ -130,13 +130,12 @@ class SignUpAdapter(FormActionAdapter):
                                '_authenticator', 'password']
         #self.approval_mail = ViewPageTemplateFile('templates/approval_mail.pt')
 
-    def getPolicy(self):
+    def getPolicy(self, data):
         """Get the policy for how the signup adapter should treat the user.
             auto: automatically create the user, requires a password to be set within the form.
             email: send the user a password reset to verify the user's email address.
             approve: hold the user in a list waiting for approval from the approval group"""
-        return 'approve'
-        if self.getApproval_group_template():
+        if data['approval_group']:
             return 'approve'
         if self.getPassword_field():
             return 'email'
@@ -172,6 +171,8 @@ class SignUpAdapter(FormActionAdapter):
         for key in data.keys():
             expression_context.setGlobal(key, REQUEST.form.get(key, None))
         data['user_group'] = self.getUser_group_template(expression_context=expression_context, **data)
+        data['approval_group'] = self.getApproval_group_template(expression_context=expression_context, **data)
+        print data
 
         if data['email'] is None or data['user_group'] == "":
             # SignUpAdapter did not setup properly
@@ -194,7 +195,7 @@ class SignUpAdapter(FormActionAdapter):
 
         # TODO check waiting list for usernames
 
-        policy = self.getPolicy()
+        policy = self.getPolicy(data)
 
         if policy == 'auto':
             result = self.autoRegister(REQUEST, data)
