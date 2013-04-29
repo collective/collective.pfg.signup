@@ -442,7 +442,7 @@ class SignUpAdapter(FormActionAdapter):
             return
         user['password'] = portal_registration.generatePassword()
         self.create_member(request, user, True)
-        self.waiting_list.remove(userid)
+        self.waiting_list.pop(userid)
         self.plone_utils.addPortalMessage(_(u'User has been approved.'))
         request.RESPONSE.redirect(self.absolute_url())
 
@@ -454,7 +454,7 @@ class SignUpAdapter(FormActionAdapter):
         user = self.waiting_list.get(userid)
         if self.user_not_permitted(user['approval_group']):
             return
-        self.waiting_list.remove(userid)
+        self.waiting_list.pop(userid)
         self.plone_utils.addPortalMessage(_(u'User has been rejected.'))
         request.RESPONSE.redirect(self.absolute_url())
 
