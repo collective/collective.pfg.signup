@@ -250,7 +250,7 @@ class SignUpAdapter(FormActionAdapter):
                        subject='Waiting for approval', immediate=True)
         return
 
-                      
+"""                      
     def groupEmail(self, data):
         # TODO not sure if this is required
         if approval_group:
@@ -335,6 +335,7 @@ class SignUpAdapter(FormActionAdapter):
                        'Approval Email')
 
             return
+"""
 
     def emailRegister(self, REQUEST, data):
         """User type should be authenticated by email,
@@ -468,23 +469,20 @@ class SignUpAdapter(FormActionAdapter):
             self.REQUEST.RESPONSE.redirect(self.absolute_url())
             return True
 
-def send_email(mail_body, mail_from, mail_to, subject):
-    # TODO instead of hard code email, changed to template
-    site = getSite()
-    mail_host = getToolByName(site, 'MailHost')
-    try:
-        mail_text = message_from_string(mail_body.encode('utf-8'))
-        mail_text.set_charset('utf-8')
-        mail_text['X-Custom'] = Header(u'Some Custom Parameter',
-                                       'utf-8')
-        mail_host.send(
-            mail_text, mto=mail_to,
-            mfrom=mail_from,
-            subject=subject, immediate=True)
-    except SMTPRecipientsRefused:
-        # Don't disclose email address on failure
-        raise SMTPRecipientsRefused(
-            'Recipient address rejected by server')
-
+    def send_email(self, mail_body, mail_from, mail_to, subject):
+        # TODO instead of hard code email, changed to template
+        mail_host = getToolByName(self, 'MailHost')
+        try:
+            mail_text = message_from_string(mail_body.encode('utf-8'))
+            mail_text.set_charset('utf-8')
+            mail_text['X-Custom'] = Header(u'Some Custom Parameter', 'utf-8')
+            mail_host.send(
+                mail_text, mto=mail_to,
+                mfrom=mail_from,
+                subject=subject, immediate=True)
+        except SMTPRecipientsRefused:
+            # Don't disclose email address on failure
+            raise SMTPRecipientsRefused(
+                'Recipient address rejected by server')
 
 registerATCT(SignUpAdapter, PROJECTNAME)
