@@ -9,11 +9,13 @@ from Products.PloneFormGen.interfaces import IPloneFormGenActionAdapter
 from Products.PloneFormGen.content.actionAdapter import FormAdapterSchema
 from Products.PloneFormGen.content.actionAdapter import FormActionAdapter
 from Products.PloneFormGen.config import FORM_ERROR_MARKER
+from Products.TALESField import TALESString
 from collective.pfg.signup.interfaces import ISignUpAdapter
 from collective.pfg.signup.config import PROJECTNAME
 from collective.pfg.signup import _
 from Products.statusmessages.interfaces import IStatusMessage
 from Products.CMFCore.utils import getToolByName
+from Products.CMFCore.Expression import getExprContext
 from zope.app.component.hooks import getSite
 from zope.component import getUtility
 from BTrees.OOBTree import OOBTree
@@ -68,30 +70,32 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
                                       u'up form.'),
                       ),
                       ),
-    atapi.StringField('user_group_template',
-                      default='council_role',
-                      required=True,
-                      widget=atapi.StringWidget(
-                          label=_(u'label_user_group_template',
-                              default=u'Add to User Group Template'),
-                          description=_(u'help_add_to_user_group_template',
-                              default=u'Enter user group template that users '
-                                      u' added to, '
-                                      u'eg ${council}_council_${role}.'),
-                      ),
-                      ),
-    atapi.StringField('approval_group_template',
-                      default='council_role_approver',
-                      required=False,
-                      widget=atapi.StringWidget(
-                          label=_(u'label_approval_group_template',
-                              default=u'Approval Group Template'),
-                          description=_(u'help_approval_group_template',
-                              default=u"Enter approval group template where "
-                                      u"group that need to approve this user, "
-                                      u"eg ${council}_${role}_approver."),
-                      ),
-                      ),
+    TALESString('user_group_template',
+        default='string:${council}_council_${role}',
+        required=True,
+        widget=atapi.StringWidget(
+            label=_(u'label_user_group_template',
+            default=u'Add to User Group Template'),
+            description=_(u'help_add_to_user_group_template',
+            default=u"""Enter user group template that users'
+                        added to,
+                        eg ${council}_council_${role}."""),
+            ),
+        ),
+
+    TALESString('approval_group_template',
+        default='string:${council}_${role}_approver',
+        required=False,
+        widget=atapi.StringWidget(
+            label=_(u'label_approval_group_template',
+            default=u'Approval Group Template'),
+            description=_(u'help_approval_group_template',
+            default=u"""Enter approval group template where
+                        group that need to approve this user,
+                        eg ${council}_${role}_approver."""),
+        ),
+    ),
+
 ))
 
 
@@ -126,19 +130,12 @@ class SignUpAdapter(FormActionAdapter):
                                '_authenticator', 'password']
         #self.approval_mail = ViewPageTemplateFile('templates/approval_mail.pt')
 
-    def generate_group(self, REQUEST, template):
-        # TODO Create generate council role group function
-        # e.g. self.approval_template will be like "${council}_${role}_approver"
-        # replace ${council} with council form field,
-        # replace ${role} with role form field from the Plone form gen
-        print template
-        return template
-
     def getPolicy(self):
         """Get the policy for how the signup adapter should treat the user.
             auto: automatically create the user, requires a password to be set within the form.
             email: send the user a password reset to verify the user's email address.
             approve: hold the user in a list waiting for approval from the approval group"""
+        return 'approve'
         if self.getApproval_group_template():
             return 'approve'
         if self.getPassword_field():
@@ -155,24 +152,28 @@ class SignUpAdapter(FormActionAdapter):
         password = None
         password_verify = None
 
-        #approval_group = self.generate_group(REQUEST, self.approval_group_template)
-        user_group = self.generate_group(REQUEST, self.user_group_template)
-
         data = {}
         for field in fields:
-            fname = field.fgField.getName()
-            val = REQUEST.form.get(fname, None)
-            if fname == self.full_name_field:
+            field_name = field.fgField.getName()
+            val = REQUEST.form.get(field_name, None)
+            if field_name == self.full_name_field:
                 data['fullname'] = val
-            elif fname == self.username_field:
+            elif field_name == self.username_field:
                 data['username'] = val
-            elif fname == self.email_field:
+            elif field_name == self.email_field:
                 data['email'] = val
-            elif fname == self.password_field:
+            elif field_name == self.password_field:
                 data['password'] = val
-        data['password_verify'] = REQUEST.form.get('password_verify', None)
+            else:
+                data[field_name] = val
+        print data
+        # TalesField needs variables to be available from the context, so create a context and add them
+        expression_context = getExprContext(self, self.aq_parent)
+        for key in data.keys():
+            expression_context.setGlobal(key, REQUEST.form.get(key, None))
+        data['user_group'] = self.getUser_group_template(expression_context=expression_context, **data)
 
-        if data['email'] is None or user_group == "":
+        if data['email'] is None or data['user_group'] == "":
             # SignUpAdapter did not setup properly
             return {FORM_ERROR_MARKER: _(u'Sign Up form is not setup properly.')}
 
@@ -196,7 +197,7 @@ class SignUpAdapter(FormActionAdapter):
         policy = self.getPolicy()
 
         if policy == 'auto':
-            result = self.autoRegister(REQUEST, data, user_group)
+            result = self.autoRegister(REQUEST, data)
             # Just return the result, this should either be None on success or an error message
             return result
 
@@ -205,17 +206,17 @@ class SignUpAdapter(FormActionAdapter):
             return {FORM_ERROR_MARKER: _(u'Portal email is not configured.')}
 
         if policy == 'email':
-            result = self.emailRegister(REQUEST, data, user_group)
+            result = self.emailRegister(REQUEST, data)
             return result
 
         if policy == 'approve':
-            result = self.approvalRegister(REQUEST, data, user_group)
+            result = self.approvalRegister(REQUEST, data)
             return result
 
         # If we get here, then something went wrong
         return {FORM_ERROR_MARKER: _(u'The form is currently unavailable')}
 
-    def approvalRegister(self, REQUEST, data, user_group):
+    def approvalRegister(self, REQUEST, data):
         """User type requires approval,
         so store them on the approval list"""
         # make sure password fields are empty
@@ -334,15 +335,15 @@ class SignUpAdapter(FormActionAdapter):
 
             return
 
-    def emailRegister(self, REQUEST, data, user_group):
+    def emailRegister(self, REQUEST, data):
         """User type should be authenticated by email,
         so randomize their password and send a password reset"""
         portal_registration = getToolByName(self, 'portal_registration')
         data['password'] = portal_registration.generatePassword()
-        result = self.create_member(REQUEST, data, True, user_group)
+        result = self.create_member(REQUEST, data, True)
         return result
 
-    def autoRegister(self, REQUEST, data, user_group):
+    def autoRegister(self, REQUEST, data):
         """User type can be auto registered, so pass them through"""
         verified = self.validate_password(data)
         if verified:
@@ -353,15 +354,16 @@ class SignUpAdapter(FormActionAdapter):
             #self.portal_groups.addGroup(user_group)
 
         # shouldn't store this in the pfg, as once the user is created, we shouldn't care
-        result = self.create_member(REQUEST, data, False, user_group)
+        result = self.create_member(REQUEST, data, False)
         return result
 
-    def create_member(self, request, data, reset_password, user_group):
+    def create_member(self, request, data, reset_password):
         portal_membership = getToolByName(self, 'portal_membership')
         portal_registration = getToolByName(self, 'portal_registration')
         portal_groups = getToolByName(self, 'portal_groups')
         username = data['username']
 
+        user_group = data['user_group']
         self.create_group(user_group)
         # need to recheck the member has not been created in the meantime
         member = portal_membership.getMemberById(username)
@@ -378,7 +380,7 @@ class SignUpAdapter(FormActionAdapter):
                 logging.exception(err)
                 return {FORM_ERROR_MARKER: err}
 
-            #portal_groups.addPrincipalToGroup(member.getUserName(), user_group)
+            portal_groups.addPrincipalToGroup(member.getUserName(), user_group)
             if reset_password:
                 # send out reset password email
                 portal_registration.mailPassword(username, request)
@@ -436,8 +438,7 @@ class SignUpAdapter(FormActionAdapter):
         userid = request.form['userid']
         user = self.waiting_list.pop(userid)
         user['password'] = portal_registration.generatePassword()
-        user_group = self.generate_group(request, self.user_group_template)
-        self.create_member(request, user, True, user_group)
+        self.create_member(request, user, True)
         request.RESPONSE.redirect(self.absolute_url())
 
     def reject_user(self):
