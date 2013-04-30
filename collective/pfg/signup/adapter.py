@@ -16,6 +16,7 @@ from collective.pfg.signup import _
 from Products.statusmessages.interfaces import IStatusMessage
 from Products.CMFCore.utils import getToolByName
 from Products.CMFCore.Expression import getExprContext
+from Products.CMFCore.interfaces import ISiteRoot
 from zope.app.component.hooks import getSite
 from zope.component import getUtility
 from BTrees.OOBTree import OOBTree
@@ -462,14 +463,12 @@ class SignUpAdapter(FormActionAdapter):
         return
 
     def send_email(self, messageText, mto, mfrom, subject):
-        portal_url = getToolByName(self, 'portal_url')
-        portal = portal_url.getPortalObject()
-        portal_email_charset = portal.getProperty('email_charset')
+        encoding = getUtility(ISiteRoot).getProperty('email_charset', 'utf-8')
         mail_host = getToolByName(self, 'MailHost')
         try:
-            messageText = message_from_string(messageText.encode(portal_email_charset))
-            messageText.set_charset(portal_email_charset)
-            messageText['X-Custom'] = Header(u'Some Custom Parameter', portal_email_charset)
+            messageText = message_from_string(messageText.encode(encoding))
+            messageText.set_charset(encoding)
+            messageText['X-Custom'] = Header(u'Some Custom Parameter', encoding)
             mail_host.send(
                 messageText, mto=mto,
                 mfrom=mfrom,
