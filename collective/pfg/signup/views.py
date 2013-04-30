@@ -57,8 +57,8 @@ class UserApproverView(BrowserView):
                 # group may not yet exist
                 group_name = value['user_group']
             link = self.context.absolute_url()
-            approve_button = '<a href="' + link + '/approve_user?userid=' + key + '">Approve button</a>'
-            reject_button = '<a href="' + link + '/reject_user?userid=' + key + '">Reject button</a>'
+            approve_button = '<a class="btn" href="' + link + '/approve_user?userid=' + key + '">Approve</a>'
+            reject_button = '<a class="btn" href="' + link + '/reject_user?userid=' + key + '">Reject</a>'
             results.append([value['username'],
                             value['fullname'],
                             group_name,
