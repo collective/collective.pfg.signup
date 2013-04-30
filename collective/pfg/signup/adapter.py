@@ -1,33 +1,34 @@
-from persistent.list import PersistentList
-from persistent.mapping import PersistentMapping
-from zope.interface import implements
-from AccessControl import ClassSecurityInfo
-from Products.Archetypes import atapi
-from Products.ATContentTypes.content.base import registerATCT
-from Products.ATContentTypes.content import schemata
-from Products.PloneFormGen.interfaces import IPloneFormGenActionAdapter
-from Products.PloneFormGen.content.actionAdapter import FormAdapterSchema
-from Products.PloneFormGen.content.actionAdapter import FormActionAdapter
-from Products.PloneFormGen.config import FORM_ERROR_MARKER
-from Products.TALESField import TALESString
-from collective.pfg.signup.interfaces import ISignUpAdapter
-from collective.pfg.signup.config import PROJECTNAME
-from collective.pfg.signup import _
-from Products.statusmessages.interfaces import IStatusMessage
-from Products.CMFCore.utils import getToolByName
-from Products.CMFCore.Expression import getExprContext
-from Products.CMFCore.interfaces import ISiteRoot
-from zope.app.component.hooks import getSite
-from zope.component import getUtility
 from BTrees.OOBTree import OOBTree
 from encrypt import encode
 from smtplib import SMTPRecipientsRefused
-from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
 from email import message_from_string
 from email.Header import Header
-import hashlib
-
 import logging
+from persistent.list import PersistentList
+from persistent.mapping import PersistentMapping
+
+from zope.interface import implements
+from zope.app.component.hooks import getSite
+from zope.component import getUtility
+from AccessControl import ClassSecurityInfo
+
+from Products.Archetypes import atapi
+from Products.ATContentTypes.content.base import registerATCT
+from Products.ATContentTypes.content import schemata
+from Products.CMFCore.utils import getToolByName
+from Products.CMFCore.Expression import getExprContext
+from Products.CMFCore.interfaces import ISiteRoot
+from Products.statusmessages.interfaces import IStatusMessage
+from Products.TALESField import TALESString
+
+from Products.PloneFormGen.config import FORM_ERROR_MARKER
+from Products.PloneFormGen.content.actionAdapter import FormAdapterSchema
+from Products.PloneFormGen.content.actionAdapter import FormActionAdapter
+from Products.PloneFormGen.interfaces import IPloneFormGenActionAdapter
+
+from collective.pfg.signup.interfaces import ISignUpAdapter
+from collective.pfg.signup.config import PROJECTNAME
+from collective.pfg.signup import _
 
 SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
     atapi.StringField('full_name_field',
@@ -129,7 +130,6 @@ class SignUpAdapter(FormActionAdapter):
         self.excluded_field = ['form_submit', 'fieldset', 'last_referer',
                                'add_reference', 'form.submitted',
                                '_authenticator', 'password']
-        #self.approval_mail = ViewPageTemplateFile('templates/approval_mail.pt')
 
     def getPolicy(self, data):
         """Get the policy for how the signup adapter should treat the user.
