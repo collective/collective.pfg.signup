@@ -428,9 +428,15 @@ class SignUpAdapter(FormActionAdapter):
     def send_approval_group_email(self, data):
         """Send an email to approval group that there is a user waiting for approval"""
         portal_title, portal_email, portal_email_name = self.get_portal_email_properties()
+        portal_groups = getToolByName(self, 'portal_groups')
+        # already checked that the group exists and has an email address
+        approval_group = portal_groups.getGroupById(data['approval_group'])
+        approval_group_email = approval_group.getProperty('email')
+        approval_group_title = approval_group.getProperty('title')
+        if not approval_group_title:
+            approval_group_title = data['approval_group']
         messageText = []
-        # TODO need a salutation from somewhere
-        messageText.append(u'Dear,')
+        messageText.append(u'Dear %s,' % approval_group_title)
         messageText.append('')
         messageText.append(u'There is a user waiting for approval. Please use the following link to login and approve/reject them.')
         messageText.append('')
@@ -440,7 +446,7 @@ class SignUpAdapter(FormActionAdapter):
         messageText.append(portal_email_name)
         messageText = '\n'.join(messageText)
         subject = portal_title + ' user Waiting for approval'
-        self.send_email(messageText, mto=data['email'], mfrom=portal_email, subject=subject)
+        self.send_email(messageText, mto=approval_group_email, mfrom=portal_email, subject=subject)
         return
 
     def send_approval_email(self, data):
