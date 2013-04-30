@@ -1,5 +1,4 @@
 from BTrees.OOBTree import OOBTree
-from encrypt import encode
 from smtplib import SMTPRecipientsRefused
 from email import message_from_string
 import logging
