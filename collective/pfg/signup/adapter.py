@@ -187,8 +187,9 @@ class SignUpAdapter(FormActionAdapter):
                 'username': _(u"The login name you selected is already "
                               u"in use or is not valid. "
                               u"Please choose another.")}
-
-        # TODO check waiting list for usernames
+        check_id = self.check_userid(data)
+        if check_id:
+            return check_id
 
         policy = self.getPolicy(data)
 
@@ -211,6 +212,14 @@ class SignUpAdapter(FormActionAdapter):
 
         # If we get here, then something went wrong
         return {FORM_ERROR_MARKER: _(u'The form is currently unavailable')}
+
+    def check_userid(self, data):
+        """Make sure the user does not already exist or on the waiting list"""
+        if data['username'] in self.waiting_list.keys():
+            # user id is already on waiting list
+            return {FORM_ERROR_MARKER: _(u'You will need to signup again.'),
+                'username': _(u'The login name you selected is already in use')}
+        # TODO check email is not already in use either in existing users or in waiting_list
 
     def approvalRegister(self, data):
         """User type requires approval,
