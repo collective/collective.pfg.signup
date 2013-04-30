@@ -229,11 +229,11 @@ class SignUpAdapter(FormActionAdapter):
         # need an email address for the approvers group
         approval_group = portal_groups.getGroupById(data['approval_group'])
         if approval_group is None:
-            self.approval_group_problem(data)
+            self.send_approval_group_problem_email(data)
         approval_email = approval_group.getProperty('email')
         if not approval_email:
             self.send_approval_group_problem_email(data)
-        self.send_approval_group_problem_email(data)
+        self.send_approval_email(data)
 
     def emailRegister(self, REQUEST, data):
         """User type should be authenticated by email,
