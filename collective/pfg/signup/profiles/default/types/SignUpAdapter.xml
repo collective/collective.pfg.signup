@@ -15,7 +15,6 @@
   <property name="allow_discussion">False</property>
   <property name="default_view">user_approver_view</property>
   <property name="view_methods" purge="False">
-    <element value="base_view" />
     <element value="user_approver_view" />
   </property>
   <alias from="(Default)" to="(dynamic view)" />
