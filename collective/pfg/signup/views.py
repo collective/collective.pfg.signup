@@ -1,3 +1,5 @@
+from AccessControl import Unauthorized
+
 from Products.CMFCore.utils import getToolByName
 from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
 from Products.Five import BrowserView
@@ -38,8 +40,7 @@ class UserApproverView(BrowserView):
         results = []
 
         if portal_membership.isAnonymousUser():
-            # Return target URL for the site anonymous visitors
-            return context.restrictedTraverse('login')()
+            raise Unauthorized('You need to login to access this page.')
 
         current_user = portal_membership.getAuthenticatedMember()
         user_groups = current_user.getGroups()
