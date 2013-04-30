@@ -2,7 +2,6 @@ from BTrees.OOBTree import OOBTree
 from encrypt import encode
 from smtplib import SMTPRecipientsRefused
 from email import message_from_string
-from email.Header import Header
 import logging
 from persistent.list import PersistentList
 from persistent.mapping import PersistentMapping
@@ -486,7 +485,6 @@ class SignUpAdapter(FormActionAdapter):
         try:
             messageText = message_from_string(messageText.encode(encoding))
             messageText.set_charset(encoding)
-            messageText['X-Custom'] = Header(u'Some Custom Parameter', encoding)
             mail_host.send(
                 messageText, mto=mto,
                 mfrom=mfrom,
