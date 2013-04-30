@@ -449,7 +449,7 @@ class SignUpAdapter(FormActionAdapter):
         messageText = []
         messageText.append(u'Dear %s,' % data['fullname'])
         messageText.append('')
-        messageText.append(u'Your account request has been declined. If you think this is in error, please contact the DLG Help Desk.')
+        messageText.append(u'Your account request has been declined. If you think this is in error, please contact the site administrator.')
         messageText.append('')
         messageText.append('Thank you')
         messageText.append(portal_email_name)
