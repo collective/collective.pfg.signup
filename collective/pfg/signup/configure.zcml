@@ -27,4 +27,9 @@
         permission="zope2.View"
         />
 
+    <permission
+        id="collective.pfg.signup.addSignUpAdapter"
+        title="collective.pfg.signup: Add SignUpAdapter"
+        />
+
 </configure>

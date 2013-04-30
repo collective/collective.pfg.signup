@@ -5,5 +5,3 @@ PROJECTNAME = 'collective.pfg.signup'
 ADD_PERMISSIONS = {
     'SignUpAdapter': 'collective.pfg.signup: Add SignUpAdapter',
 }
-setDefaultRoles(ADD_PERMISSIONS['SignUpAdapter'],
-                ('Manager', 'Owner', 'Contributor', 'Site Administrator'))
