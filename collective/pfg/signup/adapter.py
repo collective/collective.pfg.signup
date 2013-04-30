@@ -8,7 +8,6 @@ from persistent.list import PersistentList
 from persistent.mapping import PersistentMapping
 
 from zope.interface import implements
-from zope.app.component.hooks import getSite
 from zope.component import getUtility
 from AccessControl import ClassSecurityInfo
 
@@ -116,20 +115,8 @@ class SignUpAdapter(FormActionAdapter):
 
     def __init__(self, oid, **kwargs):
         """ initialize class """
-
         FormActionAdapter.__init__(self, oid, **kwargs)
-
-        self.site = getSite()
-        self.SECRET_KEY = 'o41vivy!f3!$v6hl5geg0p1o2xkvmjn9&*b)(ejc^2t]p4hmsq'
         self.waiting_list = OOBTree()
-        self.waiting_by_approver = OOBTree()
-        self.registration = getToolByName(self.site, 'portal_registration')
-        self.portal_groups = getToolByName(self.site, 'portal_groups')
-        portal_url = getToolByName(self.site, 'portal_url')
-        self.portal = portal_url.getPortalObject()
-        self.excluded_field = ['form_submit', 'fieldset', 'last_referer',
-                               'add_reference', 'form.submitted',
-                               '_authenticator', 'password']
 
     def getPolicy(self, data):
         """Get the policy for how the signup adapter should treat the user.
@@ -166,14 +153,12 @@ class SignUpAdapter(FormActionAdapter):
                 data['password'] = val
             else:
                 data[field_name] = val
-        print data
         # TalesField needs variables to be available from the context, so create a context and add them
         expression_context = getExprContext(self, self.aq_parent)
         for key in data.keys():
             expression_context.setGlobal(key, REQUEST.form.get(key, None))
         data['user_group'] = self.getUser_group_template(expression_context=expression_context, **data)
         data['approval_group'] = self.getApproval_group_template(expression_context=expression_context, **data)
-        print data
 
         if data['email'] is None or data['user_group'] == "":
             # SignUpAdapter did not setup properly
@@ -197,7 +182,7 @@ class SignUpAdapter(FormActionAdapter):
             # Just return the result, this should either be None on success or an error message
             return result
 
-        email_from = self.portal.getProperty('email_from_address')
+        email_from = getUtility(ISiteRoot).getProperty('email_from_address', '')
         if not portal_registration.isValidEmail(email_from):
             return {FORM_ERROR_MARKER: _(u'Portal email is not configured.')}
 
@@ -247,9 +232,7 @@ class SignUpAdapter(FormActionAdapter):
         if verified:
             return verified
 
-        # This is a bad idea, if anon is filling in the form they will get a permission error
-        #if not user_group in self.portal_groups.getGroupIds():
-            #self.portal_groups.addGroup(user_group)
+        self.create_group(data['user_group'])
 
         # shouldn't store this in the pfg, as once the user is created, we shouldn't care
         result = self.create_member(REQUEST, data, False)
@@ -376,10 +359,11 @@ class SignUpAdapter(FormActionAdapter):
     def send_approval_group_problem_email(self, data):
         """There is a problem with the approval group so alert someone"""
         portal_title, portal_email, portal_email_name = self.get_portal_email_properties()
-        administrators = self.portal_groups.getGroupById('Administrators')
+        portal_groups = getToolByName(self, 'portal_groups')
+        administrators = portal_groups.getGroupById('Administrators')
         administrators_email = administrators.getProperty('email')
         if not administrators_email:
-            administrators_email = self.portal.getProperty('email_from_address')
+            administrators_email = getUtility(ISiteRoot).getProperty('email_from_address', '')
         portal_groups = getToolByName(self, 'portal_groups')
         approval_group = portal_groups.getGroupById(data['approval_group'])
         if approval_group is None:
