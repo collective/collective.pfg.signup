@@ -459,12 +459,14 @@ class SignUpAdapter(FormActionAdapter):
         return
 
     def send_email(self, messageText, mto, mfrom, subject):
-        # TODO instead of hard code email, changed to template
+        portal_url = getToolByName(self, 'portal_url')
+        portal = portal_url.getPortalObject()
+        portal_email_charset = portal.getProperty('email_charset')
         mail_host = getToolByName(self, 'MailHost')
         try:
-            messageText = message_from_string(messageText.encode('utf-8'))
-            messageText.set_charset('utf-8')
-            messageText['X-Custom'] = Header(u'Some Custom Parameter', 'utf-8')
+            messageText = message_from_string(messageText.encode(portal_email_charset))
+            messageText.set_charset(portal_email_charset)
+            messageText['X-Custom'] = Header(u'Some Custom Parameter', portal_email_charset)
             mail_host.send(
                 messageText, mto=mto,
                 mfrom=mfrom,
