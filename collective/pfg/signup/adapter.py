@@ -94,7 +94,7 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
             description=_(u'help_add_to_user_group_template',
             default=u"""A TALES expression to calculate the group the user
                         should be added to. Fields in the form can be used to populate this.
-                        eg ${department}_${role}."""),
+                        eg string:${department}_${role}."""),
             ),
         ),
 
@@ -106,7 +106,8 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
             default=u'Approval Group Template'),
             description=_(u'help_approval_group_template',
             default=u"""A TALES expression to calculate which group the user should be approved by.
-                        Leave empty to allow creation of user accounts without any approval."""),
+                        Leave empty to allow creation of user accounts without any approval.
+                        eg python:request.form['role'] == 'manager' and 'Administrators' or request.form['department'] + '_manager'"""),
         ),
     ),
 
