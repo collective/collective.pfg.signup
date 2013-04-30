@@ -378,17 +378,19 @@ class SignUpAdapter(FormActionAdapter):
 
     def send_approval_group_problem_email(self, data):
         """There is a problem with the approval group so alert someone"""
-        # TODO Create waiting list email template
         portal_title, portal_email, portal_email_name = self.get_portal_email_properties()
         administrators = self.portal_groups.getGroupById('Administrators')
         administrators_email = administrators.getProperty('email')
         if not administrators_email:
             administrators_email = self.portal.getProperty('email_from_address')
+        portal_groups = getToolByName(self, 'portal_groups')
+        approval_group = portal_groups.getGroupById(data['approval_group'])
+        approval_group_title = approval_group.getProperty('title')
         messageText = []
         messageText.append(u'Dear %s,' % data['fullname'])
         messageText.append('')
         messageText.append(u'There is a problem with one of the approval groups.')
-        # TODO adding group to email would be useful
+        messageText.append(u'The group, %s, either does not exist or has no email address, and there is a user waiting to be aprpoved by that group.' % approval_group_title)
         messageText.append('')
         messageText.append('Thank you')
         messageText.append(portal_email_name)
@@ -417,8 +419,9 @@ class SignUpAdapter(FormActionAdapter):
         messageText = []
         messageText.append(u'Dear %s,' % data['fullname'])
         messageText.append('')
-        messageText.append(u'There is a user waiting for approval.')
-        # TOD add url to approval page
+        messageText.append(u'There is a user waiting for approval. Please use the following url to login and approve/reject them.')
+        messageText.append('')
+        messageText.append(self.absolute_url())
         messageText.append('')
         messageText.append('Thank you')
         messageText.append(portal_email_name)
