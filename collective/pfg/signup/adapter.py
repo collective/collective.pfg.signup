@@ -261,7 +261,7 @@ class SignUpAdapter(FormActionAdapter):
         result = self.create_member(REQUEST, data, False)
         return result
 
-    def create_member(self, request, data, reset_password):
+    def create_member(self, request, data, reset_password=False):
         portal_membership = getToolByName(self, 'portal_membership')
         portal_registration = getToolByName(self, 'portal_registration')
         portal_groups = getToolByName(self, 'portal_groups')
@@ -344,7 +344,8 @@ class SignUpAdapter(FormActionAdapter):
         if self.user_not_permitted(user['approval_group']):
             return
         user['password'] = portal_registration.generatePassword()
-        self.create_member(request, user, True)
+        self.create_member(request, user)
+        self.send_approval_email(user)
         self.waiting_list.pop(userid)
         self.plone_utils.addPortalMessage(_(u'User has been approved.'))
         request.RESPONSE.redirect(self.absolute_url())
@@ -357,7 +358,8 @@ class SignUpAdapter(FormActionAdapter):
         user = self.waiting_list.get(userid)
         if self.user_not_permitted(user['approval_group']):
             return
-        self.waiting_list.pop(userid)
+        user = self.waiting_list.pop(userid)
+        self.send_reject_email(user)
         self.plone_utils.addPortalMessage(_(u'User has been rejected.'))
         request.RESPONSE.redirect(self.absolute_url())
 
@@ -386,12 +388,16 @@ class SignUpAdapter(FormActionAdapter):
             administrators_email = self.portal.getProperty('email_from_address')
         portal_groups = getToolByName(self, 'portal_groups')
         approval_group = portal_groups.getGroupById(data['approval_group'])
-        approval_group_title = approval_group.getProperty('title')
+        if approval_group is None:
+            approval_group_title = data['approval_group']
+        else:
+            approval_group_title = approval_group.getProperty('title')
         messageText = []
-        messageText.append(u'Dear %s,' % data['fullname'])
+        # TODO this could do with tidying up. Email could be going to admin group, and would be useful to differentiate between no group and no email
+        messageText.append(u'Dear %s,' % portal_email_name)
         messageText.append('')
         messageText.append(u'There is a problem with one of the approval groups.')
-        messageText.append(u'The group, %s, either does not exist or has no email address, and there is a user waiting to be aprpoved by that group.' % approval_group_title)
+        messageText.append(u'The group, %s, either does not exist or has no email address, and there is a user waiting to be approved by that group.' % approval_group_title)
         messageText.append('')
         messageText.append('Thank you')
         messageText.append(portal_email_name)
@@ -418,9 +424,10 @@ class SignUpAdapter(FormActionAdapter):
         """Send an email to approval group that there is a user waiting for approval"""
         portal_title, portal_email, portal_email_name = self.get_portal_email_properties()
         messageText = []
-        messageText.append(u'Dear %s,' % data['fullname'])
+        # TODO need a salutation from somewhere
+        messageText.append(u'Dear,')
         messageText.append('')
-        messageText.append(u'There is a user waiting for approval. Please use the following url to login and approve/reject them.')
+        messageText.append(u'There is a user waiting for approval. Please use the following link to login and approve/reject them.')
         messageText.append('')
         messageText.append(self.absolute_url())
         messageText.append('')
@@ -434,11 +441,19 @@ class SignUpAdapter(FormActionAdapter):
     def send_approval_email(self, data):
         """Send an email confirming approval"""
         portal_title, portal_email, portal_email_name = self.get_portal_email_properties()
+        reset_tool = getToolByName(self, 'portal_password_reset')
+        reset = reset_tool.requestReset(data['username'])
+        portal_url = getToolByName(self, 'portal_url')()
+        password_url = '%s/passwordreset/%s' % (portal_url, reset['randomstring'])
+        # should we send the user id with the password link email?
         messageText = []
         messageText.append(u'Dear %s,' % data['fullname'])
         messageText.append('')
-        messageText.append(u'"Your account request has been accepted.')
-        # TODO add password reset url
+        messageText.append(u'Your account request has been accepted. Please use the following link to set your password.')
+        messageText.append('')
+        messageText.append(password_url)
+        messageText.append('')
+        messageText.append('This link will expire at: %s.' % reset['expires'].strftime('%H:%M %d/%m/%Y'))
         messageText.append('')
         messageText.append('Thank you')
         messageText.append(portal_email_name)
