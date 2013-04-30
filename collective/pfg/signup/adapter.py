@@ -30,70 +30,83 @@ from collective.pfg.signup.config import PROJECTNAME
 from collective.pfg.signup import _
 
 SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
+
     atapi.StringField('full_name_field',
-                      default='fullname',
-                      required=False,
-                      widget=atapi.StringWidget(
-                          label=_(u'label_full_name',
-                              default=u'Full Name Field'),
-                          description=_(u'help_full_name_field',
-                              default=u"Enter full name field from the sign up "
-                                      u"form."),
-                          ),
-                      ),
+        default='fullname',
+        required=False,
+        widget=atapi.StringWidget(
+            label=_(u'label_full_name',
+            default=u'Full Name Field'),
+            description=_(u'help_full_name_field',
+            default=u"""Enter the id of the field that will be used for the user's full name."""),
+        ),
+    ),
+
     atapi.StringField('username_field',
-                      default='username',
-                      required=False,
-                      widget=atapi.StringWidget(
-                          label=_(u'label_username', default=u'Username Field'),
-                          description=_(u'help_username_field',
-                              default=u"Enter username field from the "
-                                      u"sign up form."),
-                      ),
-                      ),
+        default='username',
+        required=True,
+        widget=atapi.StringWidget(
+            label=_(u'label_username', default=u'Username Field'),
+            description=_(u'help_username_field',
+            default=u""""Enter the id of the field that will be used for the user's user id.
+                         This field is required."""),
+        ),
+    ),
+
     atapi.StringField('email_field',
-                      default='email',
-                      required=True,
-                      widget=atapi.StringWidget(
-                          label=_(u'label_email', default=u'Email Field'),
-                          description=_(u'help_email_field',
-                              default=u"Enter email field from the sign up "
-                                      u"form."),
-                      ),
-                      ),
+        default='email',
+        required=True,
+        widget=atapi.StringWidget(
+            label=_(u'label_email', default=u'Email Field'),
+            description=_(u'help_email_field',
+            default=u""""Enter the id of the field that will be used for the user's email address.
+                         This field is required."""),
+        ),
+    ),
+
     atapi.StringField('password_field',
-                      default='password',
-                      required=False,
-                      widget=atapi.StringWidget(
-                          label=_(u'label_password', default=u'Password Field'),
-                          description=_(u'help_password_field',
-                              default=u'Enter password field from the sign '
-                                      u'up form.'),
-                      ),
-                      ),
+        required=False,
+        widget=atapi.StringWidget(
+            label=_(u'label_password', default=u'Password Field'),
+            description=_(u'help_password_field',
+            default=u""""Enter the id of the field that will be used for the user's password.
+                         If the Approval Group Template field is empty, and this field is empty,
+                         users signing up will be sent a password reset email."""),
+        ),
+    ),
+
+    atapi.StringField('password_verify_field',
+        required=False,
+        widget=atapi.StringWidget(
+            label=_(u'label_password_verify', default=u'Password Verify Field'),
+            description=_(u'help_password_verify_field',
+            default=u""""If there is a password and password verify field and the Approval Group Template field is empty,
+                         Users will be able to set their passwords and login immediately."""),
+        ),
+    ),
+
     TALESString('user_group_template',
-        default='string:${council}_council_${role}',
+        default='string:${department}_${role}',
         required=True,
         widget=atapi.StringWidget(
             label=_(u'label_user_group_template',
             default=u'Add to User Group Template'),
             description=_(u'help_add_to_user_group_template',
-            default=u"""Enter user group template that users'
-                        added to,
-                        eg ${council}_council_${role}."""),
+            default=u"""A TALES expression to calculate the group the user
+                        should be added to. Fields in the form can be used to populate this.
+                        eg ${department}_${role}."""),
             ),
         ),
 
     TALESString('approval_group_template',
-        default='string:${council}_${role}_approver',
+        default='string:${department}_${role}_approver',
         required=False,
         widget=atapi.StringWidget(
             label=_(u'label_approval_group_template',
             default=u'Approval Group Template'),
             description=_(u'help_approval_group_template',
-            default=u"""Enter approval group template where
-                        group that need to approve this user,
-                        eg ${council}_${role}_approver."""),
+            default=u"""A TALES expression to calculate which group the user should be approved by.
+                        Leave empty to allow creation of user accounts without any approval."""),
         ),
     ),
 
