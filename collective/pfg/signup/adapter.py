@@ -394,8 +394,11 @@ class SignUpAdapter(FormActionAdapter):
             approval_group_title = data['approval_group']
         else:
             approval_group_title = approval_group.getProperty('title')
+            if not approval_group_title:
+                approval_group_title = data['approval_group']
         messageText = []
         # TODO this could do with tidying up. Email could be going to admin group, and would be useful to differentiate between no group and no email
+        # TODO a link to the group properties page would be kind
         messageText.append(u'Dear %s,' % portal_email_name)
         messageText.append('')
         messageText.append(u'There is a problem with one of the approval groups.')
