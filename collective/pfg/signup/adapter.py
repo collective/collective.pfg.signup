@@ -164,6 +164,8 @@ class SignUpAdapter(FormActionAdapter):
                 data['email'] = val
             elif field_name == self.password_field:
                 data['password'] = val
+            elif field_name == self.password_verify_field:
+                data['password_verify'] = val
             else:
                 data[field_name] = val
         # TalesField needs variables to be available from the context, so create a context and add them
