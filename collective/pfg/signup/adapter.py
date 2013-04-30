@@ -370,63 +370,92 @@ class SignUpAdapter(FormActionAdapter):
             self.REQUEST.RESPONSE.redirect(self.absolute_url())
             return True
 
-    def get_portal_title(self):
+    def get_portal_email_properties(self):
         """Return the portal title for use in emails"""
         portal_url = getToolByName(self, 'portal_url')
         portal = portal_url.getPortalObject()
-        return portal.Title()
+        return portal.Title(), portal.getProperty('email_from_address'), portal.getProperty('email_from_name')
 
     def send_approval_group_problem_email(self, data):
         """There is a problem with the approval group so alert someone"""
         # TODO Create waiting list email template
-        portal_title = self.get_portal_title()
+        portal_title, portal_email, portal_email_name = self.get_portal_email_properties()
         administrators = self.portal_groups.getGroupById('Administrators')
         administrators_email = administrators.getProperty('email')
         if not administrators_email:
             administrators_email = self.portal.getProperty('email_from_address')
+        messageText = []
+        messageText.append(u'Dear %s,' % data['fullname'])
+        messageText.append('')
+        messageText.append(u'There is a problem with one of the approval groups.')
         # TODO adding group to email would be useful
-        messageText = u"""There is a problem with one of the approval groups."""
+        messageText.append('')
+        messageText.append('Thank you')
+        messageText.append(portal_email_name)
+        messageText = '\n'.join(messageText)
         subject = portal_title + ' approval group problem'
-        self.send_email(messageText, mto=administrators_email, mfrom=self.portal.getProperty('email_from_address'), subject=subject)
+        self.send_email(messageText, mto=administrators_email, mfrom=portal_email, subject=subject)
 
     def send_waiting_approval_email(self, data):
         """Send an approval request email"""
-        # TODO Create waiting list email template
-        portal_title = self.get_portal_title()
-        messageText = u"Your account is waiting for approval. " \
-                    u"Thank you. "
+        portal_title, portal_email, portal_email_name = self.get_portal_email_properties()
+        messageText = []
+        messageText.append(u'Dear %s,' % data['fullname'])
+        messageText.append('')
+        messageText.append(u'Thank you for registering with the %s site. Your account is waiting for approval.' % portal_title)
+        messageText.append('')
+        messageText.append('Thank you')
+        messageText.append(portal_email_name)
+        messageText = '\n'.join(messageText)
         subject = portal_title + ' account request submited for approval'
-        self.send_email(messageText, mto=data['email'], mfrom=self.portal.getProperty('email_from_address'), subject=subject)
+        self.send_email(messageText, mto=data['email'], mfrom=portal_email, subject=subject)
         return
 
     def send_approval_group_email(self, data):
         """Send an email to approval group that there is a user waiting for approval"""
-        # TODO Create waiting list email template
-        portal_title = self.get_portal_title()
-        messageText = u"There is a user waiting for approval. " \
-                    u"Thank you. "
+        portal_title, portal_email, portal_email_name = self.get_portal_email_properties()
+        messageText = []
+        messageText.append(u'Dear %s,' % data['fullname'])
+        messageText.append('')
+        messageText.append(u'There is a user waiting for approval.')
+        # TOD add url to approval page
+        messageText.append('')
+        messageText.append('Thank you')
+        messageText.append(portal_email_name)
+        messageText = '\n'.join(messageText)
         subject = portal_title + ' user Waiting for approval'
-        self.send_email(messageText, mto=data['email'], mfrom=self.portal.getProperty('email_from_address'), subject=subject)
+        self.send_email(messageText, mto=data['email'], mfrom=portal_email, subject=subject)
         return
 
     def send_approval_email(self, data):
         """Send an email confirming approval"""
-        # TODO Create waiting list email template
-        portal_title = self.get_portal_title()
-        messageText = u"Your account request has been accepted. " \
-                    u"Thank you. "
+        portal_title, portal_email, portal_email_name = self.get_portal_email_properties()
+        messageText = []
+        messageText.append(u'Dear %s,' % data['fullname'])
+        messageText.append('')
+        messageText.append(u'"Your account request has been accepted.')
+        # TODO add password reset url
+        messageText.append('')
+        messageText.append('Thank you')
+        messageText.append(portal_email_name)
+        messageText = '\n'.join(messageText)
         subject = portal_title + ' account approved'
-        self.send_email(messageText, mto=data['email'], mfrom=self.portal.getProperty('email_from_address'), subject=subject)
+        self.send_email(messageText, mto=data['email'], mfrom=portal_email, subject=subject)
         return
 
     def send_reject_email(self, data):
         """Send an email on rejection"""
-        # TODO Create waiting list email template
-        portal_title = self.get_portal_title()
-        messageText = u"Your account request has been declined. " \
-                    u"Thank you. "
+        portal_title, portal_email, portal_email_name = self.get_portal_email_properties()
+        messageText = []
+        messageText.append(u'Dear %s,' % data['fullname'])
+        messageText.append('')
+        messageText.append(u'Your account request has been declined. If you think this is in error, please contact the DLG Help Desk.')
+        messageText.append('')
+        messageText.append('Thank you')
+        messageText.append(portal_email_name)
+        messageText = '\n'.join(messageText)
         subject = portal_title + ' account request declined'
-        self.send_email(messageText, mto=data['email'], mfrom=self.portal.getProperty('email_from_address'), subject=subject)
+        self.send_email(messageText, mto=data['email'], mfrom=portal_email, subject=subject)
         return
 
     def send_email(self, messageText, mto, mfrom, subject):
