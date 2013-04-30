@@ -225,15 +225,18 @@ class SignUpAdapter(FormActionAdapter):
         data['password'] = ''
         data['password_verify'] = ''
         self.waiting_list[data['username']] = data
+        self.send_waiting_approval_email(data)
 
         # need an email address for the approvers group
         approval_group = portal_groups.getGroupById(data['approval_group'])
         if approval_group is None:
             self.send_approval_group_problem_email(data)
+            return
         approval_email = approval_group.getProperty('email')
         if not approval_email:
             self.send_approval_group_problem_email(data)
-        self.send_approval_email(data)
+            return
+        self.send_approval_group_email(data)
 
     def emailRegister(self, REQUEST, data):
         """User type should be authenticated by email,
@@ -378,12 +381,36 @@ class SignUpAdapter(FormActionAdapter):
         messageText = u"""There is a problem with one of the approval groups."""
         self.send_email(messageText, mto=administrators_email, mfrom=self.portal.getProperty('email_from_address'), subject='Approval group problem')
 
-    def send_approval_email(self, data):
+    def send_waiting_approval_email(self, data):
         """Send an approval request email"""
         # TODO Create waiting list email template
         messageText = u"Your account is waiting for approval. " \
                     u"Thank you. "
         self.send_email(messageText, mto=data['email'], mfrom=self.portal.getProperty('email_from_address'), subject='Waiting for approval')
+        return
+
+    def send_approval_group_email(self, data):
+        """Send an email to approval group that there is a user waiting for approval"""
+        # TODO Create waiting list email template
+        messageText = u"There is a user waiting for approval. " \
+                    u"Thank you. "
+        self.send_email(messageText, mto=data['email'], mfrom=self.portal.getProperty('email_from_address'), subject='Waiting for approval')
+        return
+
+    def send_approval_email(self, data):
+        """Send an email confirming approval"""
+        # TODO Create waiting list email template
+        messageText = u"Your account request has been accepted. " \
+                    u"Thank you. "
+        self.send_email(messageText, mto=data['email'], mfrom=self.portal.getProperty('email_from_address'), subject='DLG Pools account accepted')
+        return
+
+    def send_reject_email(self, data):
+        """Send an email on rejection"""
+        # TODO Create waiting list email template
+        messageText = u"Your account request has been declined. " \
+                    u"Thank you. "
+        self.send_email(messageText, mto=data['email'], mfrom=self.portal.getProperty('email_from_address'), subject='DLG Pools Approval declined')
         return
 
     def send_email(self, messageText, mto, mfrom, subject):
