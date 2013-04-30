@@ -232,27 +232,8 @@ class SignUpAdapter(FormActionAdapter):
             self.approval_group_problem(data)
         approval_email = approval_group.getProperty('email')
         if not approval_email:
-            self.approval_group_problem(data)
-        self.sendApprovalEmail(data)
-
-    def approval_group_problem(self, data):
-        """There is a problem with the approval group so alert someone"""
-        # TODO Create waiting list email template
-        administrators = self.portal_groups.getGroupById('Administrators')
-        administrators_email = administrators.getProperty('email')
-        if not administrators_email:
-            administrators_email = self.portal.getProperty('email_from_address')
-        # TODO adding group to email would be useful
-        messageText = u"""There is a problem with one of the approval groups."""
-        self.send_email(messageText, mto=administrators_email, mfrom=self.portal.getProperty('email_from_address'), subject='Approval group problem')
-
-    def sendApprovalEmail(self, data):
-        """Send an approval request email"""
-        # TODO Create waiting list email template
-        messageText = u"Your account is waiting for approval. " \
-                    u"Thank you. "
-        self.send_email(messageText, mto=data['email'], mfrom=self.portal.getProperty('email_from_address'), subject='Waiting for approval')
-        return
+            self.send_approval_group_problem_email(data)
+        self.send_approval_group_problem_email(data)
 
     def emailRegister(self, REQUEST, data):
         """User type should be authenticated by email,
@@ -385,6 +366,25 @@ class SignUpAdapter(FormActionAdapter):
             self.plone_utils.addPortalMessage(_(u'You do not have permission to do this.'))
             self.REQUEST.RESPONSE.redirect(self.absolute_url())
             return True
+
+    def send_approval_group_problem_email(self, data):
+        """There is a problem with the approval group so alert someone"""
+        # TODO Create waiting list email template
+        administrators = self.portal_groups.getGroupById('Administrators')
+        administrators_email = administrators.getProperty('email')
+        if not administrators_email:
+            administrators_email = self.portal.getProperty('email_from_address')
+        # TODO adding group to email would be useful
+        messageText = u"""There is a problem with one of the approval groups."""
+        self.send_email(messageText, mto=administrators_email, mfrom=self.portal.getProperty('email_from_address'), subject='Approval group problem')
+
+    def send_approval_email(self, data):
+        """Send an approval request email"""
+        # TODO Create waiting list email template
+        messageText = u"Your account is waiting for approval. " \
+                    u"Thank you. "
+        self.send_email(messageText, mto=data['email'], mfrom=self.portal.getProperty('email_from_address'), subject='Waiting for approval')
+        return
 
     def send_email(self, messageText, mto, mfrom, subject):
         # TODO instead of hard code email, changed to template
