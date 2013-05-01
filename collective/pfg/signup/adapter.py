@@ -198,8 +198,8 @@ class SignUpAdapter(FormActionAdapter):
             return result
 
         email_from = getUtility(ISiteRoot).getProperty('email_from_address', '')
-        if not portal_registration.isValidEmail(email_from):
-            return {FORM_ERROR_MARKER: _(u'Portal email is not configured.')}
+        #if not portal_registration.isValidEmail(email_from):
+            #return {FORM_ERROR_MARKER: _(u'Portal email is not configured.')}
 
         if policy == 'email':
             result = self.emailRegister(data)
