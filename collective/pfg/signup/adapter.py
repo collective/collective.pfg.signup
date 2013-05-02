@@ -4,6 +4,7 @@ from email import message_from_string
 import logging
 from persistent.list import PersistentList
 from persistent.mapping import PersistentMapping
+import transaction
 
 from zope.interface import implements
 from zope.component import getUtility
@@ -308,7 +309,8 @@ class SignUpAdapter(FormActionAdapter):
             except AttributeError:
                 pass
         if title or email:
-            transaction()
+            # commit a subtransaction, to instantiate the group properly, so we can edit it
+            transaction.get().commit()
             portal_groups.editGroup(user_group, properties=properties)
 
     def validate_password(self, data):
