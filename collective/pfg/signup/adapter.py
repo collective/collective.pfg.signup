@@ -43,12 +43,12 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
 
     atapi.StringField('username_field',
         default='username',
-        required=True,
+        required=False,
         widget=atapi.StringWidget(
             label=_(u'label_username', default=u'Username Field'),
             description=_(u'help_username_field',
             default=u""""Enter the id of the field that will be used for the user's user id.
-                         This field is required."""),
+                         If this field is left empty the email address will be used for the username."""),
         ),
     ),
 
@@ -146,11 +146,6 @@ class SignUpAdapter(FormActionAdapter):
         """Save form input."""
         # get username and password
         portal_registration = getToolByName(self, 'portal_registration')
-        fullname = None
-        username = None
-        email = None
-        password = None
-        password_verify = None
 
         data = {}
         for field in fields:
@@ -168,6 +163,8 @@ class SignUpAdapter(FormActionAdapter):
                 data['password_verify'] = val
             else:
                 data[field_name] = val
+        if not data.has_key('username'):
+            data['username'] = data['email']
         # TalesField needs variables to be available from the context, so create a context and add them
         expression_context = getExprContext(self, self.aq_parent)
         for key in data.keys():
