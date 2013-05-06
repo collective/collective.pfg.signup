@@ -1,5 +1,6 @@
 from BTrees.OOBTree import OOBTree
 from smtplib import SMTPRecipientsRefused
+from smtplib import SMTPServerDisconnected
 from email import message_from_string
 import logging
 from persistent.list import PersistentList
@@ -408,7 +409,11 @@ class SignUpAdapter(FormActionAdapter):
         messageText.append(portal_email_name)
         messageText = '\n'.join(messageText)
         subject = portal_title + ' approval group problem'
-        self.send_email(messageText, mto=administrators_email, mfrom=portal_email, subject=subject)
+        try:
+            self.send_email(messageText, mto=administrators_email, mfrom=portal_email, subject=subject)
+        except SMTPServerDisconnected:
+            pass
+        return
 
     def send_waiting_approval_email(self, data):
         """Send an approval request email"""
@@ -422,7 +427,10 @@ class SignUpAdapter(FormActionAdapter):
         messageText.append(portal_email_name)
         messageText = '\n'.join(messageText)
         subject = portal_title + ' account request submited for approval'
-        self.send_email(messageText, mto=data['email'], mfrom=portal_email, subject=subject)
+        try:
+            self.send_email(messageText, mto=data['email'], mfrom=portal_email, subject=subject)
+        except SMTPServerDisconnected:
+            pass
         return
 
     def send_approval_group_email(self, data):
@@ -446,7 +454,10 @@ class SignUpAdapter(FormActionAdapter):
         messageText.append(portal_email_name)
         messageText = '\n'.join(messageText)
         subject = portal_title + ' user Waiting for approval'
-        self.send_email(messageText, mto=approval_group_email, mfrom=portal_email, subject=subject)
+        try:
+            self.send_email(messageText, mto=approval_group_email, mfrom=portal_email, subject=subject)
+        except SMTPServerDisconnected:
+            pass
         return
 
     def send_approval_email(self, data):
