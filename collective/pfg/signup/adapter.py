@@ -181,10 +181,12 @@ class SignUpAdapter(FormActionAdapter):
             data['username'] = data['email']
 
         if not portal_registration.isMemberIdAllowed(data['username']):
-            return {FORM_ERROR_MARKER: _(u'You will need to signup again.'),
-                'username': _(u"The login name you selected is already "
-                              u"in use or is not valid. "
-                              u"Please choose another.")}
+            error_text = _(u"""The login name you selected is already in use or is not valid.
+                               Please choose another.""")
+            if self.getUsername_field():
+                return {FORM_ERROR_MARKER: _(u'You will need to signup again.'), 'username': error_text}
+            else:
+                return {FORM_ERROR_MARKER: _(u'You will need to signup again.'), 'email': error_text}
         check_id = self.check_userid(data)
         if check_id:
             return check_id
