@@ -166,6 +166,8 @@ class SignUpAdapter(FormActionAdapter):
                 data['password_verify'] = val
             else:
                 data[field_name] = val
+        if not data.has_key('email'):
+            return {FORM_ERROR_MARKER: _(u'Sign Up form is not setup properly.')}
         if not data.has_key('username'):
             data['username'] = data['email']
         # TalesField needs variables to be available from the context, so create a context and add them
