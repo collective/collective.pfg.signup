@@ -392,6 +392,7 @@ class SignUpAdapter(FormActionAdapter):
     def send_approval_group_problem_email(self, data):
         """There is a problem with the approval group so alert someone"""
         portal_title, portal_email, portal_email_name = self.get_portal_email_properties()
+        portal_url = getToolByName(self, 'portal_url')()
         portal_groups = getToolByName(self, 'portal_groups')
         administrators = portal_groups.getGroupById('Administrators')
         administrators_email = administrators.getProperty('email')
@@ -401,13 +402,13 @@ class SignUpAdapter(FormActionAdapter):
         approval_group = portal_groups.getGroupById(data['approval_group'])
         if approval_group is None:
             approval_group_title = data['approval_group']
+            email_link = portal_url + '/@@usergroup-groupprefs'
         else:
             approval_group_title = approval_group.getProperty('title')
+            email_link = portal_url + '/@@usergroup-groupdetails?groupname=' + data['approval_group']
             if not approval_group_title:
                 approval_group_title = data['approval_group']
         messageText = []
-        # TODO this could do with tidying up. Email could be going to admin group, and would be useful to differentiate between no group and no email
-        # TODO a link to the group properties page would be kind
         messageText.append(u'Dear %s,' % portal_email_name)
         messageText.append('')
         messageText.append(u'There is a problem with one of the approval groups.')
