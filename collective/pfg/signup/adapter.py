@@ -88,7 +88,6 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
     ),
 
     TALESString('user_group_template',
-        default='string:${department}_${role}',
         required=True,
         widget=atapi.StringWidget(
             label=_(u'label_user_group_template',
@@ -101,7 +100,6 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
         ),
 
     TALESString('approval_group_template',
-        default='string:${department}_${role}_approver',
         required=False,
         widget=atapi.StringWidget(
             label=_(u'label_approval_group_template',
