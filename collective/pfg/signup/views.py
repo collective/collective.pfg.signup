@@ -1,6 +1,11 @@
+from AccessControl import getSecurityManager
 from AccessControl import Unauthorized
 
+from zope.component import getUtility
+
+from Products.CMFCore.interfaces import ISiteRoot
 from Products.CMFCore.utils import getToolByName
+from Products.CMFCore.permissions import ManagePortal
 from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
 from Products.Five import BrowserView
 
@@ -44,6 +49,10 @@ class UserApproverView(BrowserView):
 
         current_user = portal_membership.getAuthenticatedMember()
         user_groups = current_user.getGroups()
+        sm = getSecurityManager()
+        portal = getUtility(ISiteRoot)
+        if sm.checkPermission(ManagePortal, portal):
+            user_groups = portal_groups.getGroupIds()
 
         for key, value in context.waiting_list.items():
             if value['approval_group'] not in user_groups:
