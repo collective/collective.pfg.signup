@@ -1,0 +1,50 @@
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en"
+      xmlns:tal="http://xml.zope.org/namespaces/tal"
+      xmlns:metal="http://xml.zope.org/namespaces/metal"
+      xmlns:i18n="http://xml.zope.org/namespaces/i18n"
+      lang="en"
+      metal:use-macro="context/main_template/macros/master"
+      i18n:domain="collective.pfg.signup">
+
+    <metal:javascript_head metal:fill-slot="javascript_head_slot">
+        <link rel="stylesheet" type="text/css" media="screen" href="http://ajax.aspnetcdn.com/ajax/jquery.dataTables/1.9.4/css/jquery.dataTables.css" />
+        <link rel="stylesheet" type="text/css" media="screen" href="http://ajax.aspnetcdn.com/ajax/jquery.dataTables/1.9.4/css/jquery.dataTables_themeroller.css" />
+        <script type="text/javascript" src="http://ajax.aspnetcdn.com/ajax/jquery.dataTables/1.9.4/jquery.dataTables.js"></script>
+        <script type="text/javascript"
+                tal:define="aaData python:view.result_data();
+                            aoColumns python:view.result_columns();
+                            redirectUrl python:view.context.absolute_url();"
+                tal:content="structure string:
+            if (typeof jQuery !== 'undefined') {
+
+                jQuery(function($) {
+                    var oTable;
+
+                    $('#usermanagement').submit( function() {
+		                return false;
+                    });
+                    /* Data set - can contain whatever information you want */
+                    oTable = $('#example').dataTable( {
+                    'aaData': ${aaData},
+                    'aoColumns' : ${aoColumns}
+                    } );
+                });
+            }">
+        </script>
+    </metal:javascript_head>
+
+    <body>
+
+        <metal:core fill-slot="content-core">
+            <div id="dynamic">
+                <form id="usermanagement" method="post"
+                      tal:attributes="action context/absolute_url">
+                <table cellpadding="0"
+                       cellspacing="0"
+                       border="0" class="display" id="example">
+                </table>
+                </form>
+            </div>
+        </metal:core>
+    </body>
+</html>

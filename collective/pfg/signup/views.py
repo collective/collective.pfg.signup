@@ -10,13 +10,8 @@ from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
 from Products.Five import BrowserView
 
 class UserApproverView(BrowserView):
-    # TODO: Browser view need to have custom permission that only able to view
-    # by Authenticated user. For now, it is public.
+    # TODO: Browser view need to have custom permission.
     index = ViewPageTemplateFile("templates/user_approver_view.pt")
-
-    def __init__(self, context, request):
-        super(UserApproverView, self).__init__(context, request)
-        self.results = []
 
     def result_data(self):
         # This needs to be a list of list, with the number of items in the list matching the number of columns
@@ -75,4 +70,24 @@ class UserApproverView(BrowserView):
                             approve_button,
                             reject_button])
         self.results = results
+        return self.index()
+
+class UsersSignedUpView(BrowserView):
+    index = ViewPageTemplateFile("templates/users_signedup_view.pt")
+
+    def result_data(self):
+        # This needs to be a list of list, with the number of items in the list matching the number of columns
+        return self.results
+
+    def result_columns(self):
+        return [{ "sTitle": "User Name" },
+                { "sTitle": "Full Name" },
+                { "sTitle": "Group" },
+                { "sTitle": "Email" },
+                { "sTitle": "Approve" },
+                { "sTitle": "Reject" },
+                ]
+
+    def __call__(self):
+        self.results = []
         return self.index()
