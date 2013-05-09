@@ -45,7 +45,6 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
     ),
 
     atapi.StringField('username_field',
-        default='username',
         required=False,
         widget=atapi.StringWidget(
             label=_(u'label_username', default=u'Username Field'),
