@@ -239,7 +239,11 @@ class SignUpAdapter(FormActionAdapter):
             return
         approval_email = approval_group.getProperty('email')
         if not approval_email:
-            self.send_approval_group_problem_email(data)
+            approval_group_members = approval_group.getGroupMembers()
+            if approval_group_members:
+                self.send_approval_group_members_email(data, approval_group_members)
+            else:
+                self.send_approval_group_problem_email(data)
             return
         self.send_approval_group_email(data)
 
@@ -451,8 +455,32 @@ class SignUpAdapter(FormActionAdapter):
         approval_group_title = approval_group.getProperty('title')
         if not approval_group_title:
             approval_group_title = data['approval_group']
+        messageText = self.get_approval_group_email_text(approval_group_title)
+        subject = portal_title + ' user Waiting for approval'
+        try:
+            self.send_email(messageText, mto=approval_group_email, mfrom=portal_email, subject=subject)
+        except SMTPServerDisconnected:
+            pass
+        return
+
+    def send_approval_group_members_email(self, data, approval_group_members):
+        """Send an email to each member of the approval group that there is a user waiting for approval"""
+        portal_title, portal_email, portal_email_name = self.get_portal_email_properties()
+        subject = portal_title + ' user Waiting for approval'
+        for member in approval_group_members:
+            email = member.getProperty('email')
+            name = member.getProperty('fullname')
+            if not name:
+                name = email
+            messageText = self.get_approval_group_email_text(name)
+            self.send_email(messageText, mto=email, mfrom=portal_email, subject=subject)
+        return
+
+    def get_approval_group_email_text(self, name):
+        """Construct the body text of the email"""
+        portal_title, portal_email, portal_email_name = self.get_portal_email_properties()
         messageText = []
-        messageText.append(u'Dear %s,' % approval_group_title)
+        messageText.append(u'Dear %s,' % name)
         messageText.append('')
         messageText.append(u'There is a user waiting for approval. Please use the following link to login and approve/reject them.')
         messageText.append('')
@@ -461,12 +489,7 @@ class SignUpAdapter(FormActionAdapter):
         messageText.append('Thank you')
         messageText.append(portal_email_name)
         messageText = '\n'.join(messageText)
-        subject = portal_title + ' user Waiting for approval'
-        try:
-            self.send_email(messageText, mto=approval_group_email, mfrom=portal_email, subject=subject)
-        except SMTPServerDisconnected:
-            pass
-        return
+        return messageText
 
     def send_approval_email(self, data):
         """Send an email confirming approval"""
