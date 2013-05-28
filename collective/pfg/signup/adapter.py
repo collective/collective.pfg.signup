@@ -181,6 +181,10 @@ class SignUpAdapter(FormActionAdapter):
         if not data['username']:
             data['username'] = data['email']
 
+        # force email and username to lowercase
+        data['username'] = data['username'].lower()
+        data['email'] = data['email'].lower()
+
         if not portal_registration.isMemberIdAllowed(data['username']):
             error_text = _(u"""The login name you selected is already in use or is not valid.
                                Please choose another.""")
@@ -218,8 +222,11 @@ class SignUpAdapter(FormActionAdapter):
         """Make sure the user does not already exist or on the waiting list"""
         if data['username'] in self.waiting_list.keys():
             # user id is already on waiting list
-            return {FORM_ERROR_MARKER: _(u'You will need to signup again.'),
-                'username': _(u'The login name you selected is already in use')}
+            error_text = _(u"""The login name you selected is already in use.""")
+            if self.getUsername_field():
+                return {FORM_ERROR_MARKER: _(u'You will need to signup again.'), 'username': error_text}
+            else:
+                return {FORM_ERROR_MARKER: _(u'You will need to signup again.'), 'email': error_text}
         # TODO check email is not already in use either in existing users or in waiting_list
 
     def approvalRegister(self, data):
