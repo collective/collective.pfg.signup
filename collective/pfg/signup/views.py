@@ -46,11 +46,12 @@ class UserApproverView(BrowserView):
         user_groups = current_user.getGroups()
         sm = getSecurityManager()
         portal = getUtility(ISiteRoot)
+        display_all = False
         if sm.checkPermission(ManagePortal, portal):
-            user_groups = portal_groups.getGroupIds()
+            display_all = True
 
         for key, value in context.waiting_list.items():
-            if value['approval_group'] not in user_groups:
+            if not display_all and value['approval_group'] not in user_groups:
                 continue
             user_group = portal_groups.getGroupById(value['user_group'])
             if user_group is not None:
