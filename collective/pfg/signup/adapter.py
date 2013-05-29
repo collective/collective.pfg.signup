@@ -359,13 +359,16 @@ class SignUpAdapter(FormActionAdapter):
         portal_registration = getToolByName(self, 'portal_registration')
         userid = request.form['userid']
         user = self.waiting_list.get(userid)
-        if self.user_not_permitted(user['approval_group']):
-            return
-        user['password'] = portal_registration.generatePassword()
-        self.create_member(request, user)
-        self.send_approval_email(user)
-        self.waiting_list.pop(userid)
-        self.plone_utils.addPortalMessage(_(u'User has been approved.'))
+        if user is None:
+            self.plone_utils.addPortalMessage(_(u'This user has already been dealt with.'))
+        elif self.user_not_permitted(user['approval_group']):
+            self.plone_utils.addPortalMessage(_(u'You do not have permission to manage this user.'))
+        else:
+            user['password'] = portal_registration.generatePassword()
+            self.create_member(request, user)
+            self.send_approval_email(user)
+            self.waiting_list.pop(userid)
+            self.plone_utils.addPortalMessage(_(u'User has been approved.'))
         request.RESPONSE.redirect(self.absolute_url())
 
     def reject_user(self):
@@ -374,11 +377,14 @@ class SignUpAdapter(FormActionAdapter):
         portal_registration = getToolByName(self, 'portal_registration')
         userid = request.form['userid']
         user = self.waiting_list.get(userid)
-        if self.user_not_permitted(user['approval_group']):
-            return
-        user = self.waiting_list.pop(userid)
-        self.send_reject_email(user)
-        self.plone_utils.addPortalMessage(_(u'User has been rejected.'))
+        if user is None:
+            self.plone_utils.addPortalMessage(_(u'This user has already been dealt with.'))
+        elif self.user_not_permitted(user['approval_group']):
+            self.plone_utils.addPortalMessage(_(u'You do not have permission to manage this user.'))
+        else:
+            user = self.waiting_list.pop(userid)
+            self.send_reject_email(user)
+            self.plone_utils.addPortalMessage(_(u'User has been rejected.'))
         request.RESPONSE.redirect(self.absolute_url())
 
     def user_not_permitted(self, group):
