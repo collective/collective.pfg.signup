@@ -11,6 +11,7 @@ from zope.interface import implements
 from zope.component import getUtility
 from AccessControl import ClassSecurityInfo
 from AccessControl import getSecurityManager
+from AccessControl import Unauthorized
 
 from Products.Archetypes import atapi
 from Products.ATContentTypes.content.base import registerATCT
@@ -18,6 +19,7 @@ from Products.ATContentTypes.content import schemata
 from Products.CMFCore.utils import getToolByName
 from Products.CMFCore.Expression import getExprContext
 from Products.CMFCore.interfaces import ISiteRoot
+from Products.CMFCore import permissions
 from Products.CMFCore.permissions import ManagePortal
 from Products.statusmessages.interfaces import IStatusMessage
 from Products.TALESField import TALESString
@@ -391,9 +393,11 @@ class SignUpAdapter(FormActionAdapter):
         """Check the user is permmited to approve/reject the user"""
         sm = getSecurityManager()
         portal = getUtility(ISiteRoot)
+        portal_membership = getToolByName(self, 'portal_membership')
         if sm.checkPermission(ManagePortal, portal):
             return False
-        portal_membership = getToolByName(self, 'portal_membership')
+        elif portal_membership.isAnonymousUser():
+            raise Unauthorized('You need to login to access this page.')
         current_user = portal_membership.getAuthenticatedMember()
         current_user_groups = current_user.getGroups()
         if group not in current_user_groups:
