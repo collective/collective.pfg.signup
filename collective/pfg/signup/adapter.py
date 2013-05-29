@@ -185,6 +185,8 @@ class SignUpAdapter(FormActionAdapter):
         data['username'] = data['username'].lower()
         data['email'] = data['email'].lower()
 
+        if not portal_registration.isValidEmail(data['email']):
+            return {FORM_ERROR_MARKER: _(u'You will need to signup again.'), 'email': _(u'This is not a valid email address')}
         if not portal_registration.isMemberIdAllowed(data['username']):
             error_text = _(u"""The login name you selected is already in use or is not valid.
                                Please choose another.""")
