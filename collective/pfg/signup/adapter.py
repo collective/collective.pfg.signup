@@ -438,7 +438,6 @@ class SignUpAdapter(FormActionAdapter):
         messageText.append('')
         messageText.append('Thank you,')
         messageText.append('')
-        #messageText.append('NSW Swimming Pool Register.')
         messageText.append(portal_email_name)
         messageText = '\n'.join(messageText)
         subject = portal_title + ' approval group problem'
@@ -458,7 +457,6 @@ class SignUpAdapter(FormActionAdapter):
         messageText.append('')
         messageText.append('Thank you,')
         messageText.append('')
-        #messageText.append('NSW Swimming Pool Register.')
         messageText.append(portal_email_name)
         messageText = '\n'.join(messageText)
         subject = portal_title + ' account request submited for approval'
@@ -511,7 +509,6 @@ class SignUpAdapter(FormActionAdapter):
         messageText.append('')
         messageText.append('Thank you,')
         messageText.append('')
-        #messageText.append('NSW Swimming Pool Register.')
         messageText.append(portal_email_name)
         messageText = '\n'.join(messageText)
         return messageText
@@ -535,7 +532,6 @@ class SignUpAdapter(FormActionAdapter):
         messageText.append('')
         messageText.append('Thank you,')
         messageText.append('')
-        #messageText.append('NSW Swimming Pool Register.')
         messageText.append(portal_email_name)
         messageText = '\n'.join(messageText)
         subject = portal_title + ' account approved'
@@ -552,7 +548,6 @@ class SignUpAdapter(FormActionAdapter):
         messageText.append('')
         messageText.append('Thank you,')
         messageText.append('')
-        #messageText.append('NSW Swimming Pool Register.')
         messageText.append(portal_email_name)
         messageText = '\n'.join(messageText)
         subject = portal_title + ' account request declined'
