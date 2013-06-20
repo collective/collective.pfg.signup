@@ -246,7 +246,7 @@ class SignUpAdapter(FormActionAdapter):
         # need an email address for the approvers group
         approval_group = portal_groups.getGroupById(data['approval_group'])
         if approval_group is None:
-            self.send_approval_group_problem_email(data)
+            self.send_approval_group_not_exist_email(data)
             return
         approval_email = approval_group.getProperty('email')
         if not approval_email:
@@ -410,6 +410,44 @@ class SignUpAdapter(FormActionAdapter):
         portal_url = getToolByName(self, 'portal_url')
         portal = portal_url.getPortalObject()
         return portal.Title(), portal.getProperty('email_from_address'), portal.getProperty('email_from_name')
+    
+    def send_approval_group_not_exist_email(self, data):
+        """The approval group does not exist"""
+        portal_title, portal_email, portal_email_name = self.get_portal_email_properties()
+        portal_url = getToolByName(self, 'portal_url')()
+        portal_groups = getToolByName(self, 'portal_groups')
+        administrators = portal_groups.getGroupById('Administrators')
+        administrators_email = administrators.getProperty('email')
+        if not administrators_email:
+            administrators_email = getUtility(ISiteRoot).getProperty('email_from_address', '')
+        portal_groups = getToolByName(self, 'portal_groups')
+        approval_group = portal_groups.getGroupById(data['approval_group'])
+        if approval_group is None:
+            approval_group_title = data['approval_group']
+            email_link = portal_url + '/@@usergroup-groupprefs'
+        else:
+            approval_group_title = approval_group.getProperty('title')
+            email_link = portal_url + '/@@usergroup-groupdetails?groupname=' + data['approval_group']
+            if not approval_group_title:
+                approval_group_title = data['approval_group']
+        messageText = [self.get_approval_group_email_text(approval_group_title),]
+        messageText.append('')
+        messageText.append('---------------------------------------------------')
+        messageText.append('')
+        messageText.append(u'This email has been sent to this address because the group "%s" currently doesn\'t exist and needs to be created.' % approval_group_title)
+        messageText.append('')
+        messageText.append('You can add the group using this link: %s' % portal_url + '/@@usergroup-groupprefs')
+        messageText.append('')
+        messageText.append('Thank you,')
+        messageText.append('')
+        messageText.append(portal_email_name)
+        messageText = '\n'.join(messageText)
+        subject = portal_title + ' approval group problem'
+        try:
+            self.send_email(messageText, mto=administrators_email, mfrom=portal_email, subject=subject)
+        except SMTPServerDisconnected:
+            pass
+        return
 
     def send_approval_group_problem_email(self, data):
         """There is a problem with the approval group so alert someone"""
@@ -430,11 +468,13 @@ class SignUpAdapter(FormActionAdapter):
             email_link = portal_url + '/@@usergroup-groupdetails?groupname=' + data['approval_group']
             if not approval_group_title:
                 approval_group_title = data['approval_group']
-        messageText = []
-        messageText.append(u'Dear %s,' % portal_email_name)
+        messageText = [self.get_approval_group_email_text(approval_group_title),]
         messageText.append('')
-        messageText.append(u'There is a problem with one of the approval groups.')
-        messageText.append(u'The group, %s, either does not exist or has no email address, and there is a user waiting to be approved by that group.' % approval_group_title)
+        messageText.append('---------------------------------------------------')
+        messageText.append('')
+        messageText.append(u'This email has been sent to this address because the group "%s" currently doesn\'t have any members with contact information or the group itself doesn\'t have contact information.' % approval_group_title)
+        messageText.append('')
+        messageText.append('You can add members to the group using this link: %s' % portal_url + '/@@usergroup-groupmembership?groupname=' + data['approval_group'])
         messageText.append('')
         messageText.append('Thank you,')
         messageText.append('')
