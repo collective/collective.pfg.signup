@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = '1.0'
+version = '1.1'
 short_description = "A PloneFormGen adapter that saves signup form"
 long_description = (
     open('README.md').read()

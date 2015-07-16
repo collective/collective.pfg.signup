@@ -1,8 +1,20 @@
 Changelog
 =========
 
-1.0-dev (unreleased)
---------------------
+1.1 (unreleased)
+----------------
+
+* User management
+  [ivanteoh]
+
+1.0 (2013-06-20)
+----------------
+
+* User sign up management
+  [davismr, ivanteoh, djay]
+
+0.1 (2013-02-05)
+----------------
 
 * Initial implementation
   [Pretaweb]
