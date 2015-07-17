@@ -34,7 +34,7 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
         default='fullname',
         required=False,
         widget=atapi.StringWidget(
-            label=_(u'label_full_name', default=u'Full Name Field'),
+            label=_(u'label_full_name', default=u'Full Name Field'),  # noqa H702
             description=_(
                 u'help_full_name_field',
                 default=u"""Enter the id of the field that will be used for the
@@ -172,7 +172,7 @@ class SignUpAdapter(FormActionAdapter):
             return 'email'
         return 'auto'
 
-    def onSuccess(self, fields, REQUEST=None):
+    def onSuccess(self, fields, REQUEST=None):  # noqa C901
         """Save form input."""
         # get username and password
         portal_registration = getToolByName(self, 'portal_registration')
