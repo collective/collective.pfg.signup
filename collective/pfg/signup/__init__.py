@@ -1,7 +1,8 @@
-from zope.i18nmessageid import MessageFactory
+"""Initialise module package."""
 from collective.pfg.signup import config
 from Products.Archetypes import atapi
 from Products.CMFCore import utils
+from zope.i18nmessageid import MessageFactory
 
 # Set up the i18n message factory for our package
 _ = MessageFactory('collective.pfg.signup')
@@ -9,7 +10,6 @@ _ = MessageFactory('collective.pfg.signup')
 
 def initialize(context):
     """Initializer called when used as a Zope 2 product."""
-
     # Retrieve the content types that have been registered with Archetypes
     # This happens when the content type is imported and the registerType()
     # call in the content type's module is invoked. Actually, this happens

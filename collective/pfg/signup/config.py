@@ -1,5 +1,4 @@
-"""config -- shared values"""
-from Products.CMFCore.permissions import setDefaultRoles
+"""config -- shared values."""
 
 PROJECTNAME = 'collective.pfg.signup'
 ADD_PERMISSIONS = {

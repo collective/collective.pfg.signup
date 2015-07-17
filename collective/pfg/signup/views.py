@@ -1,35 +1,45 @@
+"""Browser view on sign up adapter."""
 from AccessControl import getSecurityManager
 from AccessControl import Unauthorized
 
-from zope.component import getUtility
-
 from Products.CMFCore.interfaces import ISiteRoot
-from Products.CMFCore.utils import getToolByName
 from Products.CMFCore.permissions import ManagePortal
+from Products.CMFCore.utils import getToolByName
 from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
 from Products.Five import BrowserView
 
+from zope.component import getUtility
+
+
 class UserApproverView(BrowserView):
-    # TODO: Browser view need to have custom permission.
+
+    """User approver browser view."""
+
+    # TODO(Ivan): Browser view need to have custom permission.
     index = ViewPageTemplateFile("templates/user_approver_view.pt")
 
     def result_data(self):
-        # This needs to be a list of list, with the number of items in the list matching the number of columns
+        """Return user data in list."""
+        # This needs to be a list of list, with the number of items in the list
+        # matching the number of columns
         return self.results
 
     def result_columns(self):
-        return [{ "sTitle": "User Name" },
-                { "sTitle": "Full Name" },
-                { "sTitle": "Group" },
-                { "sTitle": "Email" },
-                { "sTitle": "Approve" },
-                { "sTitle": "Reject" },
+        """Return user data columns."""
+        return [{"sTitle": "User Name"},
+                {"sTitle": "Full Name"},
+                {"sTitle": "Group"},
+                {"sTitle": "Email"},
+                {"sTitle": "Approve"},
+                {"sTitle": "Reject"},
                 ]
 
     def results(self):
+        """Return user data in list."""
         return self.results
 
     def __call__(self):
+        """Browser view call."""
         # aq_inner is needed in some cases like in the portlet renderers
         # where the context itself is a portlet renderer and it's not on the
         # acquisition chain leading to the portal root.
@@ -62,8 +72,10 @@ class UserApproverView(BrowserView):
                 # group may not yet exist
                 group_name = value['user_group']
             link = self.context.absolute_url()
-            approve_button = '<a class="btn" href="' + link + '/approve_user?userid=' + key + '">Approve</a>'
-            reject_button = '<a class="btn" href="' + link + '/reject_user?userid=' + key + '">Reject</a>'
+            approve_button = '<a class="btn" href="' + link + \
+                '/approve_user?userid=' + key + '">Approve</a>'
+            reject_button = '<a class="btn" href="' + link + \
+                '/reject_user?userid=' + key + '">Reject</a>'
             results.append([value['username'],
                             value['fullname'],
                             group_name,
@@ -73,22 +85,30 @@ class UserApproverView(BrowserView):
         self.results = results
         return self.index()
 
+
 class UsersSignedUpView(BrowserView):
+
+    """User signed up browser view."""
+
     index = ViewPageTemplateFile("templates/users_signedup_view.pt")
 
     def result_data(self):
-        # This needs to be a list of list, with the number of items in the list matching the number of columns
+        """Return user data in list."""
+        # This needs to be a list of list, with the number of items in the list
+        # matching the number of columns
         return self.results
 
     def result_columns(self):
-        return [{ "sTitle": "User Name" },
-                { "sTitle": "Full Name" },
-                { "sTitle": "Group" },
-                { "sTitle": "Email" },
-                { "sTitle": "Approve" },
-                { "sTitle": "Reject" },
+        """Return user data columns."""
+        return [{"sTitle": "User Name"},
+                {"sTitle": "Full Name"},
+                {"sTitle": "Group"},
+                {"sTitle": "Email"},
+                {"sTitle": "Approve"},
+                {"sTitle": "Reject"},
                 ]
 
     def __call__(self):
+        """Browser view call."""
         self.results = []
         return self.index()
