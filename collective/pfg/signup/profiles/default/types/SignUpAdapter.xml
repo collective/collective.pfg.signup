@@ -16,6 +16,7 @@
   <property name="default_view">user_approver_view</property>
   <property name="view_methods" purge="False">
     <element value="user_approver_view" />
+    <element value="user_search_view" />
   </property>
   <alias from="(Default)" to="(dynamic view)" />
   <alias from="edit" to="atct_edit" />

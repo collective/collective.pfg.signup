@@ -86,11 +86,11 @@ class UserApproverView(BrowserView):
         return self.index()
 
 
-class UsersSignedUpView(BrowserView):
+class UserSearchView(BrowserView):
 
-    """User signed up browser view."""
+    """User search browser view."""
 
-    index = ViewPageTemplateFile("templates/users_signedup_view.pt")
+    index = ViewPageTemplateFile("templates/user_search_view.pt")
 
     def result_data(self):
         """Return user data in list."""
