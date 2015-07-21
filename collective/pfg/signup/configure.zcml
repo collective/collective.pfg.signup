@@ -29,9 +29,10 @@
 
     <browser:page
         for=".interfaces.ISignUpAdapter"
-        name="user_search_view"
+        name="user-search-view"
         class=".views.UserSearchView"
         permission="zope2.View"
+        template="templates/user_search_view.pt"
         />
 
     <browser:resourceDirectory
