@@ -203,8 +203,8 @@ class UserSearchView(UsersGroupsControlPanelView):
             user_info['can_delete'] = canDelete
             user_info['can_set_email'] = user.canWriteProperty('email')
             user_info['can_set_password'] = canPasswordSet
-            user_info['council_group'] = 'council_group'
-            user_info['active_status'] = 'active_status'
+            user_info['council_group'] = self.getGroups(user)
+            user_info['active_status'] = self.getStatus(user)
             results.append(user_info)
 
         # Sort the users by fullname
@@ -215,3 +215,29 @@ class UserSearchView(UsersGroupsControlPanelView):
         # Reset the request variable, just in case.
         self.request.set('__ignore_group_roles__', False)
         return results
+
+    def getGroups(self, user):
+        context = self.context.aq_inner
+        portal_groups = getToolByName(context, 'portal_groups')
+        group_names = []
+        user_group_ids = user.getGroups()
+        # how we get pool user groups, generic?
+        for user_group_id in user_group_ids:
+            user_group = portal_groups.getGroupById(user_group_id)
+            # group may not yet exist
+            group_name = user_group_id
+            if user_group is not None:
+                group_name = user_group.getProperty('title')
+                if not group_name:
+                    group_name = user_group_id
+            if group_name:
+                group_names.append(group_name)
+        return ", ".join(group_names)
+
+    def getStatus(self, user):
+        user_group_ids = user.getGroups()
+        status = "Active"
+        if len(user_group_ids) == 1 and 'AuthenticatedUsers' in user_group_ids:
+            status = "Inactive"
+        return status
+
