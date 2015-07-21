@@ -16,8 +16,6 @@ from Products.PluggableAuthService.interfaces.plugins import IRolesPlugin
 
 from itertools import chain
 from plone.app.controlpanel.usergroups import UsersGroupsControlPanelView
-from plone.protect import CheckAuthenticator
-from zExceptions import Forbidden
 from zope.component import getMultiAdapter
 from zope.component import getUtility
 
@@ -106,7 +104,7 @@ class UserSearchView(UsersGroupsControlPanelView):
     def __call__(self):
         """Call this browser view."""
         form = self.request.form
-        submitted = form.get('form.submitted', False)
+        # submitted = form.get('form.submitted', False)
         search = form.get('form.button.Search', None) is not None
         findAll = form.get('form.button.FindAll', None) is not None
         self.searchString = not findAll and form.get('searchstring', '') or ''
@@ -124,6 +122,7 @@ class UserSearchView(UsersGroupsControlPanelView):
 
     def doSearch(self, searchString):
         """Search users."""
+        # TODO(ivan): not sure do we need these code below? should delete?
         acl = getToolByName(self, 'acl_users')
         rolemakers = acl.plugins.listPlugins(IRolesPlugin)
 
@@ -217,6 +216,7 @@ class UserSearchView(UsersGroupsControlPanelView):
         return results
 
     def getGroups(self, user):
+        """Get user groups."""
         context = self.context.aq_inner
         portal_groups = getToolByName(context, 'portal_groups')
         group_names = []
@@ -235,9 +235,9 @@ class UserSearchView(UsersGroupsControlPanelView):
         return ", ".join(group_names)
 
     def getStatus(self, user):
+        """Get user status."""
         user_group_ids = user.getGroups()
-        status = "Active"
+        status = _("Active")
         if len(user_group_ids) == 1 and 'AuthenticatedUsers' in user_group_ids:
-            status = "Inactive"
+            status = _("Inactive")
         return status
-
