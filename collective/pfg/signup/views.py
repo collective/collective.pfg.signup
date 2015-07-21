@@ -96,16 +96,15 @@ class UserSearchView(BrowserView):
         """Return user data in list."""
         # This needs to be a list of list, with the number of items in the list
         # matching the number of columns
-        return self.results
+        return []
 
     def result_columns(self):
         """Return user data columns."""
-        return [{"sTitle": "User Name"},
+        return [{"sTitle": "User Name / Email"},
                 {"sTitle": "Full Name"},
                 {"sTitle": "Group"},
-                {"sTitle": "Email"},
-                {"sTitle": "Approve"},
-                {"sTitle": "Reject"},
+                {"sTitle": "Status"},
+                {"sTitle": "Action"},
                 ]
 
     def __call__(self):

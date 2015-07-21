@@ -5,11 +5,43 @@
       lang="en"
       metal:use-macro="context/main_template/macros/master"
       i18n:domain="collective.pfg.signup">
+    <metal:javascript_head metal:fill-slot="javascript_head_slot">
+        <link rel="stylesheet" type="text/css" media="screen" href="http://ajax.aspnetcdn.com/ajax/jquery.dataTables/1.9.4/css/jquery.dataTables.css" />
+        <link rel="stylesheet" type="text/css" media="screen" href="http://ajax.aspnetcdn.com/ajax/jquery.dataTables/1.9.4/css/jquery.dataTables_themeroller.css" />
+        <script type="text/javascript" src="http://ajax.aspnetcdn.com/ajax/jquery.dataTables/1.9.4/jquery.dataTables.js"></script>
+    </metal:javascript_head>
 
     <body>
         <metal:core fill-slot="content-core">
             <div id="manage-user">
-                <p>Testing</p>
+                <form tal:attributes="action string:${context/absolute_url}/@@user_search_view" method="post" name="user-search-form" enctype="False" id="user-search-form">
+                    <p><a href="http://localhost:8080/17/mnt/pools/pooldb/pgWelcome/OpenForm">Return to main menu</a></p>
+                    <p>Please select name or council name.</p>
+                    <div class="register-search-form control-groups form-horizontal">
+                        <input type="hidden" value="50" name="limit">
+                        <div class="control-group">
+                            <label class="control-label " for="username">Name</label>
+                            <div class="controls"><span><input type="text" name="username" value="" id="username"></span></div>
+                        </div>
+                        <div class="control-group">
+                            <label class="control-label " for="council-name">Council Name</label>
+                            <div class="controls"><span><select id="council-name" name="council-name">
+                                <option value="value1">Value 1</option>
+                                <option value="value2" selected>Value 2</option>
+                                <option value="value3">Value 3</option>
+                            </select></span></div>
+                        </div>
+                    </div>
+                    <div class="formControls">
+                        <span class="actionButtons">
+                            <input type="submit" name="user-search" value="Search" class="context">
+                        </span>
+                    </div>
+                    <table cellpadding="0"
+                           cellspacing="0"
+                           border="0" class="display" id="example">
+                    </table>
+                </form>
             </div>
         </metal:core>
     </body>
