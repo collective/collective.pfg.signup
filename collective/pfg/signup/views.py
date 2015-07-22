@@ -109,7 +109,7 @@ class UserSearchView(UsersGroupsControlPanelView):
         # If you are unsure what this means always use context.aq_inner
         context = self.context.aq_inner
         portal_membership = getToolByName(context, 'portal_membership')
-        
+
         if portal_membership.isAnonymousUser():
             raise Unauthorized('You need to login to access this page.')
 
@@ -125,7 +125,7 @@ class UserSearchView(UsersGroupsControlPanelView):
             self.newSearch = True
 
         # Only search for all ('') if the many_users flag is not set.
-        if not(self.many_users) or bool(self.searchString):
+        if not self.many_users or bool(self.searchString):
             self.searchResults = self.doSearch(self.searchString)
 
         return self.index()
