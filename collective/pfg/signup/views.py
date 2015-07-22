@@ -103,6 +103,16 @@ class UserSearchView(UsersGroupsControlPanelView):
 
     def __call__(self):
         """Call this browser view."""
+        # aq_inner is needed in some cases like in the portlet renderers
+        # where the context itself is a portlet renderer and it's not on the
+        # acquisition chain leading to the portal root.
+        # If you are unsure what this means always use context.aq_inner
+        context = self.context.aq_inner
+        portal_membership = getToolByName(context, 'portal_membership')
+        
+        if portal_membership.isAnonymousUser():
+            raise Unauthorized('You need to login to access this page.')
+
         form = self.request.form
         # submitted = form.get('form.submitted', False)
         search = form.get('form.button.Search', None) is not None
@@ -204,6 +214,7 @@ class UserSearchView(UsersGroupsControlPanelView):
             user_info['can_set_password'] = canPasswordSet
             user_info['council_group'] = self.getGroups(user)
             user_info['active_status'] = self.getStatus(user)
+            import pdb; pdb.set_trace()
             results.append(user_info)
 
         # Sort the users by fullname
