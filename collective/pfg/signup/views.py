@@ -214,7 +214,6 @@ class UserSearchView(UsersGroupsControlPanelView):
             user_info['can_set_password'] = canPasswordSet
             user_info['council_group'] = self.getGroups(user)
             user_info['active_status'] = self.getStatus(user)
-            import pdb; pdb.set_trace()
             results.append(user_info)
 
         # Sort the users by fullname
