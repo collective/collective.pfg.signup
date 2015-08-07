@@ -116,20 +116,20 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
         ),
 
     TALESString(
-        'approval_group_template',
+        'manage_group_template',
         required=False,
         widget=atapi.StringWidget(
             label=_(
-                u'label_approval_group_template',
-                default=u'Approval Group Template'),
+                u'label_manage_group_template',
+                default=u'Manage Group Template'),
             description=_(
-                u'help_approval_group_template',
+                u'help_manage_group_template',
                 default=u"""A TALES expression to calculate which group the
-                            user should be approved by. Leave empty to allow
-                            creation of user accounts without any approval. eg
-                            python:request.form['role'] == 'manager' and
-                            'Administrators' or request.form['department'] +
-                            '_manager'"""),
+                            user should be manage by. Leave empty to allow
+                            creation of user accounts without any management.
+                            eg python:{'Administrators': ['*']}. This TALES
+                            expression is allowing all the users managed by
+                            'Administrators' group."""),
         ),
     ),
 
@@ -205,7 +205,9 @@ class SignUpAdapter(FormActionAdapter):
             expression_context.setGlobal(key, REQUEST.form.get(key, None))
         data['user_group'] = self.getUser_group_template(
             expression_context=expression_context, **data)
-        data['approval_group'] = self.getApproval_group_template(
+        # TODO(ivanteoh) split the manage_group_template into two:
+        # manage_group and approval_group
+        data['manage_group'] = self.getManage_group_template(
             expression_context=expression_context, **data)
 
         if data['email'] is None or data['user_group'] == "":
