@@ -101,6 +101,7 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
 
     TALESString(
         'user_group_template',
+        default="python:{'Administrators': ['*']}",
         required=True,
         widget=atapi.StringWidget(
             label=_(
@@ -124,12 +125,13 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
                 default=u'Manage Group Template'),
             description=_(
                 u'help_manage_group_template',
-                default=u"""A TALES expression to calculate which group the
-                            user should be manage by. Leave empty to allow
-                            creation of user accounts without any management.
-                            eg python:{'Administrators': ['*']}. This TALES
-                            expression is allowing all the users managed by
-                            'Administrators' group."""),
+                default=u"""A TALES expression return a dictionary where 'key'
+                            value is which group the 'value' value should be
+                            manage by. '*' meaning all users. Leave empty to
+                            allow creation of user accounts without any
+                            management. eg python:{'Administrators': ['*']}.
+                            This TALES expression is allowing all the users
+                            managed by 'Administrators' group."""),
         ),
     ),
 
@@ -155,6 +157,7 @@ class SignUpAdapter(FormActionAdapter):
         """Initialize class."""
         FormActionAdapter.__init__(self, oid, **kwargs)
         self.waiting_list = OOBTree()
+        self.management_list = {}
 
     def getPolicy(self, data):
         """Get the policy for how the signup adapter should treat the user.
@@ -205,10 +208,20 @@ class SignUpAdapter(FormActionAdapter):
             expression_context.setGlobal(key, REQUEST.form.get(key, None))
         data['user_group'] = self.getUser_group_template(
             expression_context=expression_context, **data)
-        # TODO(ivanteoh) split the manage_group_template into two:
+        # Split the manage_group_template into two:
         # manage_group and approval_group
-        data['manage_group'] = self.getManage_group_template(
+        manage_group = self.getManage_group_template(
             expression_context=expression_context, **data)
+        is_manage_group_dict = isinstance(manage_group, dict)
+        data['approval_group'] = ""
+        if manage_group and is_manage_group_dict:
+            self.management_list = manage_group
+            for manager, user_list in manage_group.iteritems():
+                if '*' in user_list:
+                    data['approval_group'] = manager
+                if data['user_group'] in user_list:
+                    data['approval_group'] = manager
+                    break
 
         if data['email'] is None or data['user_group'] == "":
             # SignUpAdapter did not setup properly
@@ -244,7 +257,7 @@ class SignUpAdapter(FormActionAdapter):
         policy = self.getPolicy(data)
 
         if policy == 'auto':
-            result = self.autoRegister(data)
+            result = self.autoRegister(REQUEST, data)
             # Just return the result, this should either be None on success or
             # an error message
             return result
@@ -255,7 +268,7 @@ class SignUpAdapter(FormActionAdapter):
             return {FORM_ERROR_MARKER: _(u'Portal email is not configured.')}
 
         if policy == 'email':
-            result = self.emailRegister(data)
+            result = self.emailRegister(REQUEST, data)
             return result
 
         if policy == 'approve':
@@ -310,17 +323,17 @@ class SignUpAdapter(FormActionAdapter):
             return
         self.send_approval_group_email(data)
 
-    def emailRegister(self, REQUEST, data):
+    def emailRegister(self, request, data):
         """User type should be authenticated by email.
 
         So randomize their password and send a password reset.
         """
         portal_registration = getToolByName(self, 'portal_registration')
         data['password'] = portal_registration.generatePassword()
-        result = self.create_member(REQUEST, data, True)
+        result = self.create_member(request, data, True)
         return result
 
-    def autoRegister(self, REQUEST, data):
+    def autoRegister(self, request, data):
         """User type can be auto registered, so pass them through."""
         verified = self.validate_password(data)
         if verified:
@@ -330,7 +343,7 @@ class SignUpAdapter(FormActionAdapter):
 
         # shouldn't store this in the pfg, as once the user is created, we
         # shouldn't care
-        result = self.create_member(REQUEST, data, False)
+        result = self.create_member(request, data, False)
         return result
 
     def create_member(self, request, data, reset_password=False):
