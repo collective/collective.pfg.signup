@@ -113,6 +113,7 @@ class UserSearchView(UsersGroupsControlPanelView):
         if portal_membership.isAnonymousUser():
             raise Unauthorized('You need to login to access this page.')
 
+        user_management_list = context.get_management_dict()
         form = self.request.form
         # submitted = form.get('form.submitted', False)
         search = form.get('form.button.Search', None) is not None

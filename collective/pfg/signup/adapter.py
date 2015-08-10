@@ -157,7 +157,6 @@ class SignUpAdapter(FormActionAdapter):
         """Initialize class."""
         FormActionAdapter.__init__(self, oid, **kwargs)
         self.waiting_list = OOBTree()
-        self.management_list = {}
 
     def getPolicy(self, data):
         """Get the policy for how the signup adapter should treat the user.
@@ -210,12 +209,13 @@ class SignUpAdapter(FormActionAdapter):
             expression_context=expression_context, **data)
         # Split the manage_group_template into two:
         # manage_group and approval_group
+        # manage_group_template can't use data argument any more
+        # because it will use when form data is not available
         manage_group = self.getManage_group_template(
-            expression_context=expression_context, **data)
+            expression_context=expression_context)
         is_manage_group_dict = isinstance(manage_group, dict)
         data['approval_group'] = ""
         if manage_group and is_manage_group_dict:
-            self.management_list = manage_group
             for manager, user_list in manage_group.iteritems():
                 if '*' in user_list:
                     data['approval_group'] = manager
@@ -739,5 +739,17 @@ class SignUpAdapter(FormActionAdapter):
             # Don't disclose email address on failure
             raise SMTPRecipientsRefused(
                 'Recipient address rejected by server')
+
+    def get_management_dict(self):
+        """Return dictionary where 'key' group manage 'value' groups.
+
+        '*' meaning all users. Leave empty to allow creation of user accounts
+        without any management. eg python:{'Administrators': ['*']}. This TALES
+        expression is allowing all the users managed by 'Administrators' group.
+        """
+        expression_context = getExprContext(self, self.aq_parent)
+        manage_group = self.getManage_group_template(
+            expression_context=expression_context)
+        return manage_group
 
 registerATCT(SignUpAdapter, PROJECTNAME)
