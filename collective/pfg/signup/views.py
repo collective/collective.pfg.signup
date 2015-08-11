@@ -288,3 +288,49 @@ class UserSearchView(UsersGroupsControlPanelView):
         if len(user_group_ids) == 1 and 'AuthenticatedUsers' in user_group_ids:
             status = _("Inactive")
         return status
+
+class UserProfileView(BrowserView):
+
+    """User profile browser view."""
+    index = ViewPageTemplateFile("templates/user_profile_view.pt")
+
+    def __call__(self):
+        """Call this browser view."""
+        # aq_inner is needed in some cases like in the portlet renderers
+        # where the context itself is a portlet renderer and it's not on the
+        # acquisition chain leading to the portal root.
+        # If you are unsure what this means always use context.aq_inner
+        context = self.context.aq_inner
+        self.userid = self.request.get("userid", "")
+        print "UserProfileView call: %s" % self.userid
+
+        if not self.userid:
+            return self.index()
+
+        return self.index()
+
+class UserEditView(BrowserView):
+
+    """User edit browser view."""
+    index = ViewPageTemplateFile("templates/user_edit_view.pt")
+
+    def __init__(self, context, request):
+        """Initial this browser view."""
+        self.context = context
+        self.request = request
+        self.userid = self.request.get("userid", "")
+        print "UserEditView init"
+
+    def __call__(self):
+        """Call this browser view."""
+        # aq_inner is needed in some cases like in the portlet renderers
+        # where the context itself is a portlet renderer and it's not on the
+        # acquisition chain leading to the portal root.
+        # If you are unsure what this means always use context.aq_inner
+        context = self.context.aq_inner
+        print "UserEditView call: %s" % self.userid
+
+        if not self.userid:
+            return self.index()
+
+        return self.index()

@@ -5,6 +5,7 @@
       lang="en"
       metal:use-macro="context/main_template/macros/master"
       i18n:domain="collective.pfg.signup">
+
     <metal:javascript_head metal:fill-slot="javascript_head_slot">
         <link rel="stylesheet" type="text/css" media="screen" href="http://ajax.aspnetcdn.com/ajax/jquery.dataTables/1.9.4/css/jquery.dataTables.css" />
         <link rel="stylesheet" type="text/css" media="screen" href="http://ajax.aspnetcdn.com/ajax/jquery.dataTables/1.9.4/css/jquery.dataTables_themeroller.css" />

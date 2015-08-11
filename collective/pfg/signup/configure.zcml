@@ -35,6 +35,20 @@
         template="templates/user_search_view.pt"
         />
 
+    <browser:page
+        for=".interfaces.ISignUpAdapter"
+        name="user-profile-view"
+        class=".views.UserProfileView"
+        permission="zope2.View"
+        />
+
+    <browser:page
+        for=".interfaces.ISignUpAdapter"
+        name="user-edit-view"
+        class=".views.UserEditView"
+        permission="zope2.View"
+        />
+
     <browser:resourceDirectory
         name="collective.pfg.signup.javascript"
         directory="javascript"

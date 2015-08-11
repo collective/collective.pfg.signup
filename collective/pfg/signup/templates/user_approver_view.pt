@@ -34,7 +34,6 @@
     </metal:javascript_head>
 
     <body>
-
         <metal:core fill-slot="content-core">
             <div id="dynamic">
                 <form id="usermanagement" method="post"
