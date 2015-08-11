@@ -100,6 +100,7 @@ class UserApproverView(BrowserView):
 class UserSearchView(UsersGroupsControlPanelView):
 
     """User search browser view."""
+    MANAGE_ALL = "*"
 
     def __call__(self):
         """Call this browser view."""
@@ -113,7 +114,6 @@ class UserSearchView(UsersGroupsControlPanelView):
         if portal_membership.isAnonymousUser():
             raise Unauthorized('You need to login to access this page.')
 
-        user_management_list = context.get_management_dict()
         form = self.request.form
         # submitted = form.get('form.submitted', False)
         search = form.get('form.button.Search', None) is not None
@@ -138,6 +138,30 @@ class UserSearchView(UsersGroupsControlPanelView):
         rolemakers = acl.plugins.listPlugins(IRolesPlugin)
 
         mtool = getToolByName(self, 'portal_membership')
+
+        user_management_list = self.context.aq_inner.get_management_dict()
+        current_user = mtool.getAuthenticatedMember()
+        groups_tool = getToolByName(self, 'portal_groups')
+        current_group_objects = groups_tool.getGroupsByUserId(current_user.id)
+        current_groups = [group.id for group in current_group_objects]
+        print "current_groups %s" % current_groups
+        common_groups = set(user_management_list.keys()) & set(current_groups)
+        print "common_groups %s" % common_groups
+
+        limitGroups = []
+
+        for common_group in common_groups:
+            manage_user_group = user_management_list[common_group]
+            if self.MANAGE_ALL in manage_user_group:
+                limitGroups = [self.MANAGE_ALL]
+                break
+            limitGroups += manage_user_group
+        print "limitGroups %s" % limitGroups
+
+        if not limitGroups:
+            # Reset the request variable, just in case.
+            self.request.set('__ignore_group_roles__', False)
+            return []
 
         searchView = getMultiAdapter(
             (aq_inner(self.context), self.request), name='pas_search')
@@ -176,6 +200,7 @@ class UserSearchView(UsersGroupsControlPanelView):
         # assigned ('explicit'), inherited ('inherited'), or not assigned at
         # all (None).
         results = []
+
         for user_info in explicit_users:
             userId = user_info['id']
             user = mtool.getMemberById(userId)
@@ -184,6 +209,17 @@ class UserSearchView(UsersGroupsControlPanelView):
                 logger.warn(
                     'Skipped user without principal object: %s' % userId)
                 continue
+
+            if self.MANAGE_ALL not in limitGroups:
+                # TODO((ivan) limit the search instead of doing it after that
+                group_objects = groups_tool.getGroupsByUserId(userId)
+                user_groups = [group.id for group in group_objects]
+                same_groups = set(limitGroups) & set(user_groups)
+                print "user_groups %s" % user_groups
+                print "same_groups %s" % same_groups
+                if not same_groups:
+                    continue
+
             explicitlyAssignedRoles = []
             for rolemaker_id, rolemaker in rolemakers:
                 explicitlyAssignedRoles.extend(
