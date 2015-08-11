@@ -100,7 +100,6 @@ class UserApproverView(BrowserView):
 class UserSearchView(UsersGroupsControlPanelView):
 
     """User search browser view."""
-    MANAGE_ALL = "*"
 
     def __call__(self):
         """Call this browser view."""
@@ -138,27 +137,23 @@ class UserSearchView(UsersGroupsControlPanelView):
         rolemakers = acl.plugins.listPlugins(IRolesPlugin)
 
         mtool = getToolByName(self, 'portal_membership')
+        groups_tool = getToolByName(self, 'portal_groups')
+        current_user = mtool.getAuthenticatedMember()
+        sm = getSecurityManager()
+        portal = getUtility(ISiteRoot)
 
         user_management_list = self.context.aq_inner.get_management_dict()
-        current_user = mtool.getAuthenticatedMember()
-        groups_tool = getToolByName(self, 'portal_groups')
-        current_group_objects = groups_tool.getGroupsByUserId(current_user.id)
-        current_groups = [group.id for group in current_group_objects]
-        print "current_groups %s" % current_groups
-        common_groups = set(user_management_list.keys()) & set(current_groups)
-        print "common_groups %s" % common_groups
+        manage_by_group = self.context.aq_inner.get_manage_by_groups()
+        manage_all = self.context.aq_inner.get_manage_all()
+        print "user_management_list %s" % user_management_list
+        print "manage_by_group %s" % manage_by_group
+        print "manage_all %s" % manage_all
 
-        limitGroups = []
+        if sm.checkPermission(ManagePortal, portal) and not manage_by_group:
+            # show all for adminstratior/manager
+            manage_by_group = [manage_all]
 
-        for common_group in common_groups:
-            manage_user_group = user_management_list[common_group]
-            if self.MANAGE_ALL in manage_user_group:
-                limitGroups = [self.MANAGE_ALL]
-                break
-            limitGroups += manage_user_group
-        print "limitGroups %s" % limitGroups
-
-        if not limitGroups:
+        if not manage_by_group:
             # Reset the request variable, just in case.
             self.request.set('__ignore_group_roles__', False)
             return []
@@ -210,11 +205,10 @@ class UserSearchView(UsersGroupsControlPanelView):
                     'Skipped user without principal object: %s' % userId)
                 continue
 
-            if self.MANAGE_ALL not in limitGroups:
+            if manage_all not in manage_by_group:
                 # TODO((ivan) limit the search instead of doing it after that
-                group_objects = groups_tool.getGroupsByUserId(userId)
-                user_groups = [group.id for group in group_objects]
-                same_groups = set(limitGroups) & set(user_groups)
+                user_groups = user.getGroups()
+                same_groups = set(manage_by_group) & set(user_groups)
                 print "user_groups %s" % user_groups
                 print "same_groups %s" % same_groups
                 if not same_groups:
@@ -306,6 +300,28 @@ class UserProfileView(BrowserView):
 
         if not self.userid:
             return self.index()
+
+        portal_membership = getToolByName(context, 'portal_membership')
+        portal_groups = getToolByName(context, 'portal_groups')
+
+        if portal_membership.isAnonymousUser():
+            raise Unauthorized('You need to login to access this page.')
+
+        current_user = portal_membership.getAuthenticatedMember()
+        user_groups = current_user.getGroups()
+        sm = getSecurityManager()
+        portal = getUtility(ISiteRoot)
+        display_all = False
+        if sm.checkPermission(ManagePortal, portal):
+            display_all = True
+
+        user_management_list = self.context.aq_inner.get_management_dict()
+        current_group_objects = groups_tool.getGroupsByUserId(current_user.id)
+        current_groups = [group.id for group in current_group_objects]
+        print "current_groups %s" % current_groups
+        common_groups = set(user_management_list.keys()) & set(current_groups)
+        print "common_groups %s" % common_groups
+
 
         return self.index()
 

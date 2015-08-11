@@ -150,6 +150,7 @@ class SignUpAdapter(FormActionAdapter):
     default_view = 'user_approver_view'
     schema = SignUpAdapterSchema
     security = ClassSecurityInfo()
+    manage_all = "*"
 
     security.declarePrivate('onSuccess')
 
@@ -750,6 +751,42 @@ class SignUpAdapter(FormActionAdapter):
         expression_context = getExprContext(self, self.aq_parent)
         manage_group = self.getManage_group_template(
             expression_context=expression_context)
+        print "manage_group %s" % manage_group
         return manage_group
+
+    def get_manage_by_groups(self):
+        """Return a list of group ids that manage by current login user.
+
+        '*' meaning all users. Compare current login user with
+        management dictionary keys.
+        """
+        portal_membership = getToolByName(self, 'portal_membership')
+        portal_groups = getToolByName(self, 'portal_groups')
+
+        if portal_membership.isAnonymousUser():
+            return []
+
+        current_user = portal_membership.getAuthenticatedMember()
+        user_groups = current_user.getGroups()
+
+        user_management_list = self.get_management_dict()
+        common_groups = set(user_management_list.keys()) & set(user_groups)
+        print "common_groups %s" % common_groups
+
+        manage_by_group = []
+
+        for common_group in common_groups:
+            manage_user_group = user_management_list[common_group]
+            if self.manage_all in manage_user_group:
+                manage_by_group = [self.manage_all]
+                break
+            manage_by_group += manage_user_group
+        print "manage_by_group %s" % manage_by_group
+
+        return manage_by_group
+
+    def get_manage_all(self):
+        """Return manage all constant string."""
+        return self.manage_all
 
 registerATCT(SignUpAdapter, PROJECTNAME)
