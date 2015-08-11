@@ -14,7 +14,9 @@
 
     <body>
         <metal:core fill-slot="content-core"
-                tal:define="template_id string:@@user_search_view;
+                tal:define="template_id string:user_search_view;
+                            profile_view string:user_profile_view;
+                            edit_view string:user_edit_view;
                             showAll python:request.get('showAll', '') and not view.newSearch and 'y';
                             Batch python:modules['Products.CMFPlone'].Batch;
                             b_start python:0 if view.newSearch else request.get('b_start',0);
@@ -81,8 +83,8 @@
                                 tal:attributes="class python:oddrow and 'odd' or 'even'">
 
                                 <td>
-                                    <a href="@@user-information"
-                                       tal:attributes="href string:$portal_url/@@user-information?${userquery}">
+                                    <a href="user-profile-view"
+                                       tal:attributes="href string:$context_url/$profile_view?${userquery}">
                                         <span tal:replace="userid">username</span>
                                     </a>
                                     <input type="hidden" name="users.id:records" tal:attributes="value userid" />
@@ -100,7 +102,10 @@
                                   <span tal:replace="user/active_status">User Active</span>
                                 </td>
                                 <td>
-                                    Edit
+                                    <a href="user-edit-view"
+                                       tal:attributes="href string:$context_url/$edit_view?${userquery}">
+                                        <span>Edit</span>
+                                    </a>
                                 </td>
                             </tr>
                           </tal:block>

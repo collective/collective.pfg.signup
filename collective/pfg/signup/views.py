@@ -302,7 +302,6 @@ class UserProfileView(BrowserView):
             return self.index()
 
         portal_membership = getToolByName(context, 'portal_membership')
-        portal_groups = getToolByName(context, 'portal_groups')
 
         if portal_membership.isAnonymousUser():
             raise Unauthorized('You need to login to access this page.')
@@ -311,17 +310,33 @@ class UserProfileView(BrowserView):
         user_groups = current_user.getGroups()
         sm = getSecurityManager()
         portal = getUtility(ISiteRoot)
-        display_all = False
-        if sm.checkPermission(ManagePortal, portal):
-            display_all = True
 
         user_management_list = self.context.aq_inner.get_management_dict()
-        current_group_objects = groups_tool.getGroupsByUserId(current_user.id)
-        current_groups = [group.id for group in current_group_objects]
-        print "current_groups %s" % current_groups
-        common_groups = set(user_management_list.keys()) & set(current_groups)
-        print "common_groups %s" % common_groups
+        manage_by_group = self.context.aq_inner.get_manage_by_groups()
+        manage_all = self.context.aq_inner.get_manage_all()
+        print "user_management_list %s" % user_management_list
+        print "manage_by_group %s" % manage_by_group
+        print "manage_all %s" % manage_all
 
+        if sm.checkPermission(ManagePortal, portal) and not manage_by_group:
+            # show all for adminstratior/manager
+            manage_by_group = [manage_all]
+
+        if not manage_by_group:
+            return self.index()
+
+        user = portal_membership.getMemberById(self.userid)
+        if manage_all not in manage_by_group:
+            # TODO((ivan) limit the search instead of doing it after that
+            user_groups = user.getGroups()
+            same_groups = set(manage_by_group) & set(user_groups)
+            print "user_groups %s" % user_groups
+            print "same_groups %s" % same_groups
+            if not same_groups:
+                return self.index()
+
+        self.user_fullname = user.getProperty('fullname', '')
+        self.user_email = user.getProperty('email', '')
 
         return self.index()
 
