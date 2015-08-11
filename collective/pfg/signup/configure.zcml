@@ -29,7 +29,7 @@
 
     <browser:page
         for=".interfaces.ISignUpAdapter"
-        name="user-search-view"
+        name="user_search_view"
         class=".views.UserSearchView"
         permission="zope2.View"
         template="templates/user_search_view.pt"
@@ -37,14 +37,14 @@
 
     <browser:page
         for=".interfaces.ISignUpAdapter"
-        name="user-profile-view"
+        name="user_profile_view"
         class=".views.UserProfileView"
         permission="zope2.View"
         />
 
     <browser:page
         for=".interfaces.ISignUpAdapter"
-        name="user-edit-view"
+        name="user_edit_view"
         class=".views.UserEditView"
         permission="zope2.View"
         />
