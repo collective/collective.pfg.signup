@@ -6,44 +6,65 @@
       metal:use-macro="context/main_template/macros/master"
       i18n:domain="collective.pfg.signup">
 
-<head>
+    <body>
 
-</head>
+        <metal:core fill-slot="content-core"
+                    tal:define="search_view string:user_search_view;
+                                context_url context/absolute_url;">
+            <div id="dynamic">
+                <a href="" tal:attributes="href string:$context_url/$search_view">Back to Search User</a>
+                <form id="userprofiledetails"
+                      method="post"
+                      tal:attributes="action context/absolute_url">
+                    <input type="hidden"
+                           name="userid"
+                           value="userid"
+                           tal:attributes="value view/userid;" />
+                    <table class="plain">
+                        <tbody>
+                            <tr>
+                                <th>Full name</th>
+                                <td><span class="TEXTFieldRead-TEXT">Fred</span></td>
+                            </tr>
+                            <tr>
+                                <th>Name of council</th>
+                                <td><span class="TEXTFieldRead-TEXT">Alburny</span></td>
+                            </tr>
+                            <tr>
+                                <th>User type</th>
+                                <td><span class="TEXTFieldRead-TEXT">Super user</span></td>
+                            </tr>
+                            <tr>
+                                <th>Username / email</th>
+                                <td><span class="TEXTFieldRead-TEXT">fred@alburny.com</span></td>
+                            </tr>
+                            <tr>
+                                <th>Access approved by</th>
+                                <td><span class="TEXTFieldRead-TEXT">Jim Olg</span></td>
+                            </tr>
+                            <tr>
+                                <th>Access approved date</th>
+                                <td><span class="TEXTFieldRead-TEXT">29 May 2013</span></td>
+                            </tr>
+                            <tr>
+                                <th>Access last updated by</th>
+                                <td><span class="TEXTFieldRead-TEXT">Jim Olg</span></td>
+                            </tr>
+                            <tr>
+                                <th>Access last updated date</th>
+                                <td><span class="TEXTFieldRead-TEXT">29 May 2014</span></td>
+                            </tr>
+                            <tr>
+                                <th>Status</th>
+                                <td><span class="TEXTFieldRead-TEXT">Inactive</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <input type="submit" value="Save" name="form.button.save">
+                    <input type="submit" value="Cancel" name="form.button.cancel">
+                </form>
+            </div>
+        </metal:core>
+    </body>
 
-<body>
-<metal:main fill-slot="prefs_configlet_content"
-            tal:define="getmacro nocall: context/account-macro;
-                        configlet_view python:True">
-
-        <div id="edit-bar"
-             tal:define="view_name view/__name__;
-                         userid view/userid|nothing;
-                         userquery python:view.makeQuery(userid=userid)">
-            <ul class="contentViews" id="content-views">
-              <li tal:define="selected python:view_name=='user-information'"
-                  tal:attributes="class python:selected and 'selected' or 'plain'">
-                <a href=""
-                   tal:attributes="href string:$portal_url/@@user-information?${userquery}"
-                   i18n:translate="title_personal_information_form">Personal Information</a>
-              </li>
-              <li tal:define="selected python:view_name=='user-preferences'"
-                  tal:attributes="class python:selected and 'selected' or 'plain'">
-                <a href=""
-                   tal:attributes="href string:$portal_url/@@user-preferences?${userquery}"
-                   i18n:translate="">Personal Preferences</a>
-              </li>
-
-              <li>
-                <a href=""
-                   tal:attributes="href string:$portal_url/@@usergroup-usermembership?${userquery}"
-                   i18n:translate="label_group_memberships">Group Memberships</a>
-              </li>
-            </ul>
-            <div class="contentActions">&nbsp;</div>
-        </div>
-
-        <metal:use_form use-macro="python: getmacro('main')"/>
-
-    </metal:main>
-</body>
 </html>
