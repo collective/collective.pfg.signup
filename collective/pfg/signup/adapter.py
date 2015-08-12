@@ -172,8 +172,8 @@ class SignUpAdapter(FormActionAdapter):
         if data['approval_group']:
             return 'approve'
         if self.getPassword_field():
-            return 'email'
-        return 'auto'
+            return 'auto'
+        return 'email'
 
     def onSuccess(self, fields, REQUEST=None):  # noqa C901
         """Save form input."""
