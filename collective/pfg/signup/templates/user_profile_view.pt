@@ -10,12 +10,14 @@
 
         <metal:core fill-slot="content-core"
                     tal:define="search_view string:user_search_view;
+                                profile_view string:user_profile_view;
+                                edit_view string:user_edit_view;
                                 context_url context/absolute_url;">
             <div id="dynamic">
                 <a href="" tal:attributes="href string:$context_url/$search_view">Back to Search User</a>
                 <form id="userprofiledetails"
                       method="post"
-                      tal:attributes="action context/absolute_url">
+                      tal:attributes="action string:$context_url/$profile_view">
                     <input type="hidden"
                            name="userid"
                            value="userid"
@@ -24,39 +26,35 @@
                         <tbody>
                             <tr>
                                 <th>Full name</th>
-                                <td><span class="TEXTFieldRead-TEXT">Fred</span></td>
+                                <td><span class="TEXTFieldRead-TEXT" tal:replace="view/user_fullname">username</span></td>
                             </tr>
                             <tr>
-                                <th>Name of council</th>
-                                <td><span class="TEXTFieldRead-TEXT">Alburny</span></td>
-                            </tr>
-                            <tr>
-                                <th>User type</th>
-                                <td><span class="TEXTFieldRead-TEXT">Super user</span></td>
+                                <th>User group</th>
+                                <td><span class="TEXTFieldRead-TEXT" tal:replace="view/user_group">Super user</span></td>
                             </tr>
                             <tr>
                                 <th>Username / email</th>
-                                <td><span class="TEXTFieldRead-TEXT">fred@alburny.com</span></td>
+                                <td><span class="TEXTFieldRead-TEXT" tal:replace="view/userid">fred@alburny.com</span></td>
                             </tr>
                             <tr>
                                 <th>Access approved by</th>
-                                <td><span class="TEXTFieldRead-TEXT">Jim Olg</span></td>
+                                <td><span class="TEXTFieldRead-TEXT" tal:replace="view/user_approved_by">Jim Olg</span></td>
                             </tr>
                             <tr>
                                 <th>Access approved date</th>
-                                <td><span class="TEXTFieldRead-TEXT">29 May 2013</span></td>
+                                <td><span class="TEXTFieldRead-TEXT" tal:replace="view/user_approved_date">29 May 2013</span></td>
                             </tr>
                             <tr>
                                 <th>Access last updated by</th>
-                                <td><span class="TEXTFieldRead-TEXT">Jim Olg</span></td>
+                                <td><span class="TEXTFieldRead-TEXT" tal:replace="view/user_last_updated_by">Jim Olg</span></td>
                             </tr>
                             <tr>
                                 <th>Access last updated date</th>
-                                <td><span class="TEXTFieldRead-TEXT">29 May 2014</span></td>
+                                <td><span class="TEXTFieldRead-TEXT" tal:replace="view/user_last_updated_date">29 May 2014</span></td>
                             </tr>
                             <tr>
                                 <th>Status</th>
-                                <td><span class="TEXTFieldRead-TEXT">Inactive</span></td>
+                                <td><span class="TEXTFieldRead-TEXT" tal:replace="view/user_status">Inactive</span></td>
                             </tr>
                         </tbody>
                     </table>

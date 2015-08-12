@@ -789,4 +789,12 @@ class SignUpAdapter(FormActionAdapter):
         """Return manage all constant string."""
         return self.manage_all
 
+    def getStatus(self, user):
+        """Get user status."""
+        user_group_ids = user.getGroups()
+        status = _("Active")
+        if len(user_group_ids) == 1 and 'AuthenticatedUsers' in user_group_ids:
+            status = _("Inactive")
+        return status
+
 registerATCT(SignUpAdapter, PROJECTNAME)

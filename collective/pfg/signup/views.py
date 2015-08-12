@@ -277,16 +277,29 @@ class UserSearchView(UsersGroupsControlPanelView):
 
     def getStatus(self, user):
         """Get user status."""
-        user_group_ids = user.getGroups()
-        status = _("Active")
-        if len(user_group_ids) == 1 and 'AuthenticatedUsers' in user_group_ids:
-            status = _("Inactive")
-        return status
+        return self.context.aq_inner.getStatus(user)
 
 class UserProfileView(BrowserView):
 
     """User profile browser view."""
     index = ViewPageTemplateFile("templates/user_profile_view.pt")
+
+    def __init__(self, context, request):
+        """Initial this browser view."""
+        self.context = context
+        self.request = request
+        self.userid = self.request.get("userid", "")
+        self.user_edit = self.request.get("form.button.edit", "")
+        self.user_activate = self.request.get("form.button.activate", "")
+        self.user_fullname = ""
+        self.user_group = ""
+        self.user_email = ""
+        self.user_approved_by = ""
+        self.user_approved_date = ""
+        self.user_last_updated_by = ""
+        self.user_last_updated_date = ""
+        self.user_status = ""
+        print "UserProfileView init"
 
     def __call__(self):
         """Call this browser view."""
@@ -296,7 +309,16 @@ class UserProfileView(BrowserView):
         # If you are unsure what this means always use context.aq_inner
         context = self.context.aq_inner
         self.userid = self.request.get("userid", "")
+        self.user_edit = self.request.get("form.button.edit", "")
+        self.user_activate = self.request.get("form.button.activate", "")
         print "UserProfileView call: %s" % self.userid
+        print "user_edit call: %s" % self.user_edit
+        print "user_activate call: %s" % self.user_activate
+
+        if self.user_edit == "Edit":
+            edit_view = "%s/user_edit_view?userid=%s" % (
+                self.context.absolute_url(), self.userid)
+            self.request.response.redirect(edit_view)
 
         if not self.userid:
             return self.index()
@@ -326,6 +348,9 @@ class UserProfileView(BrowserView):
             return self.index()
 
         user = portal_membership.getMemberById(self.userid)
+        if not user:
+            return self.index()
+
         if manage_all not in manage_by_group:
             # TODO((ivan) limit the search instead of doing it after that
             user_groups = user.getGroups()
@@ -337,6 +362,7 @@ class UserProfileView(BrowserView):
 
         self.user_fullname = user.getProperty('fullname', '')
         self.user_email = user.getProperty('email', '')
+        self.user_status = self.context.aq_inner.getStatus(user)
 
         return self.index()
 
@@ -350,6 +376,16 @@ class UserEditView(BrowserView):
         self.context = context
         self.request = request
         self.userid = self.request.get("userid", "")
+        self.user_save = self.request.get("form.button.save", "")
+        self.user_cancel = self.request.get("form.button.cancel", "")
+        self.user_fullname = ""
+        self.user_group = ""
+        self.user_email = ""
+        self.user_approved_by = ""
+        self.user_approved_date = ""
+        self.user_last_updated_by = ""
+        self.user_last_updated_date = ""
+        self.user_status = ""
         print "UserEditView init"
 
     def __call__(self):
@@ -359,9 +395,60 @@ class UserEditView(BrowserView):
         # acquisition chain leading to the portal root.
         # If you are unsure what this means always use context.aq_inner
         context = self.context.aq_inner
+        self.userid = self.request.get("userid", "")
+        self.user_save = self.request.get("form.button.save", "")
+        self.user_cancel = self.request.get("form.button.cancel", "")
         print "UserEditView call: %s" % self.userid
+        print "user_save call: %s" % self.user_save
+        print "user_cancel call: %s" % self.user_cancel
+
+        if self.user_cancel == "Cancel":
+            profile_view = "%s/user_profile_view?userid=%s" % (
+                self.context.absolute_url(), self.userid)
+            self.request.response.redirect(profile_view)
 
         if not self.userid:
             return self.index()
+
+        portal_membership = getToolByName(context, 'portal_membership')
+
+        if portal_membership.isAnonymousUser():
+            raise Unauthorized('You need to login to access this page.')
+
+        current_user = portal_membership.getAuthenticatedMember()
+        user_groups = current_user.getGroups()
+        sm = getSecurityManager()
+        portal = getUtility(ISiteRoot)
+
+        user_management_list = self.context.aq_inner.get_management_dict()
+        manage_by_group = self.context.aq_inner.get_manage_by_groups()
+        manage_all = self.context.aq_inner.get_manage_all()
+        print "user_management_list %s" % user_management_list
+        print "manage_by_group %s" % manage_by_group
+        print "manage_all %s" % manage_all
+
+        if sm.checkPermission(ManagePortal, portal) and not manage_by_group:
+            # show all for adminstratior/manager
+            manage_by_group = [manage_all]
+
+        if not manage_by_group:
+            return self.index()
+
+        user = portal_membership.getMemberById(self.userid)
+        if not user:
+            return self.index()
+
+        if manage_all not in manage_by_group:
+            # TODO((ivan) limit the search instead of doing it after that
+            user_groups = user.getGroups()
+            same_groups = set(manage_by_group) & set(user_groups)
+            print "user_groups %s" % user_groups
+            print "same_groups %s" % same_groups
+            if not same_groups:
+                return self.index()
+
+        self.user_fullname = user.getProperty('fullname', '')
+        self.user_email = user.getProperty('email', '')
+        self.user_status = self.context.aq_inner.getStatus(user)
 
         return self.index()
