@@ -803,12 +803,36 @@ class SignUpAdapter(FormActionAdapter):
         """Return manage all constant string."""
         return self.manage_all
 
-    def getStatus(self, user):
-        """Get user status."""
+    def get_status(self, user):
+        """Return user status."""
         user_group_ids = user.getGroups()
         status = _("Active")
         if len(user_group_ids) == 1 and 'AuthenticatedUsers' in user_group_ids:
             status = _("Inactive")
         return status
+
+    def get_groups_title(self, user_groups):
+        """Return groups name title."""
+        acl_users = getToolByName(self, 'acl_users')
+        portal_groups = getToolByName(self, 'portal_groups')
+
+        # if user_groups contains 'manage_all', show all the groups
+        if self.manage_all in user_groups:
+            user_groups = acl_users.source_groups.getGroupIds()
+
+        group_names = []
+        for user_group_id in user_groups:
+            user_group = portal_groups.getGroupById(user_group_id)
+            # group may not yet exist
+            group_name = ""
+            if user_group is not None:
+                group_name = user_group.getProperty("title", "")
+                if not group_name:
+                    # don't have title, use id
+                    group_name = user_group_id
+            if group_name:
+                group_names.append(group_name)
+        return group_names
+
 
 registerATCT(SignUpAdapter, PROJECTNAME)

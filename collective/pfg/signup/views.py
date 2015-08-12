@@ -136,9 +136,8 @@ class UserSearchView(UsersGroupsControlPanelView):
         acl = getToolByName(self, 'acl_users')
         rolemakers = acl.plugins.listPlugins(IRolesPlugin)
 
-        mtool = getToolByName(self, 'portal_membership')
-        groups_tool = getToolByName(self, 'portal_groups')
-        current_user = mtool.getAuthenticatedMember()
+        portal_membership = getToolByName(self, 'portal_membership')
+        current_user = portal_membership.getAuthenticatedMember()
         sm = getSecurityManager()
         portal = getUtility(ISiteRoot)
 
@@ -198,7 +197,7 @@ class UserSearchView(UsersGroupsControlPanelView):
 
         for user_info in explicit_users:
             userId = user_info['id']
-            user = mtool.getMemberById(userId)
+            user = portal_membership.getMemberById(userId)
             # play safe, though this should never happen
             if user is None:
                 logger.warn(
@@ -244,7 +243,7 @@ class UserSearchView(UsersGroupsControlPanelView):
             user_info['can_set_email'] = user.canWriteProperty('email')
             user_info['can_set_password'] = canPasswordSet
             user_info['council_group'] = self.getGroups(user)
-            user_info['active_status'] = self.context.aq_inner.getStatus(user)
+            user_info['active_status'] = self.context.aq_inner.get_status(user)
             results.append(user_info)
 
         # Sort the users by fullname
@@ -262,8 +261,6 @@ class UserSearchView(UsersGroupsControlPanelView):
             return ""
 
         context = self.context.aq_inner
-        portal_groups = getToolByName(context, 'portal_groups')
-
         login_manage_by_groups = context.get_manage_by_groups()
         print "login_manage_by_groups %s" % login_manage_by_groups
         user_group_ids = user.getGroups()
@@ -271,19 +268,7 @@ class UserSearchView(UsersGroupsControlPanelView):
         if context.manage_all not in login_manage_by_groups:
             user_groups = set(login_manage_by_groups) & set(user_group_ids)
 
-        # how we get pool user groups, generic?
-        group_names = []
-        for user_group_id in user_groups:
-            user_group = portal_groups.getGroupById(user_group_id)
-            # group may not yet exist
-            group_name = ""
-            if user_group is not None:
-                group_name = user_group.getProperty("title", "")
-                if not group_name:
-                    # don't have title, use id
-                    group_name = user_group_id
-            if group_name:
-                group_names.append(group_name)
+        group_names = context.get_groups_title(user_groups)
         return ", ".join(group_names)
 
 class UserProfileView(BrowserView):
@@ -358,9 +343,10 @@ class UserProfileView(BrowserView):
         if not user:
             return self.index()
 
+        user_groups = user.getGroups()
+        same_groups = user_groups
         if manage_all not in manage_by_group:
             # TODO((ivan) limit the search instead of doing it after that
-            user_groups = user.getGroups()
             same_groups = set(manage_by_group) & set(user_groups)
             print "user_groups %s" % user_groups
             print "same_groups %s" % same_groups
@@ -369,7 +355,10 @@ class UserProfileView(BrowserView):
 
         self.user_fullname = user.getProperty('fullname', '')
         self.user_email = user.getProperty('email', '')
-        self.user_status = self.context.aq_inner.getStatus(user)
+        self.user_status = self.context.aq_inner.get_status(user)
+        # display the groups based from the login user management list
+        group_names = context.get_groups_title(same_groups)
+        self.user_group = ", ".join(group_names)
 
         return self.index()
 
@@ -428,6 +417,7 @@ class UserEditView(BrowserView):
         portal = getUtility(ISiteRoot)
 
         user_management_list = self.context.aq_inner.get_management_dict()
+        manager_groups = self.context.aq_inner.get_manager_groups()
         manage_by_group = self.context.aq_inner.get_manage_by_groups()
         manage_all = self.context.aq_inner.get_manage_all()
         print "user_management_list %s" % user_management_list
@@ -445,17 +435,25 @@ class UserEditView(BrowserView):
         if not user:
             return self.index()
 
+        user_groups = user.getGroups()
+        same_groups = user_groups
         if manage_all not in manage_by_group:
-            # TODO((ivan) limit the search instead of doing it after that
-            user_groups = user.getGroups()
+            # TODO(ivan) limit the search instead of doing it after that
             same_groups = set(manage_by_group) & set(user_groups)
             print "user_groups %s" % user_groups
             print "same_groups %s" % same_groups
             if not same_groups:
                 return self.index()
 
+
         self.user_fullname = user.getProperty('fullname', '')
         self.user_email = user.getProperty('email', '')
-        self.user_status = self.context.aq_inner.getStatus(user)
+        self.user_status = self.context.aq_inner.get_status(user)
+        # in edit page, login user allow to assign the user to the group that
+        # they allow and its own groups as well.
+        # TODO(ivan) change to combo box.
+        edit_user_groups = set(manage_by_group) | set(manager_groups)
+        group_names = context.get_groups_title(edit_user_groups)
+        self.user_group = ", ".join(group_names)
 
         return self.index()
