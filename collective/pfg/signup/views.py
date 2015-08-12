@@ -244,7 +244,7 @@ class UserSearchView(UsersGroupsControlPanelView):
             user_info['can_set_email'] = user.canWriteProperty('email')
             user_info['can_set_password'] = canPasswordSet
             user_info['council_group'] = self.getGroups(user)
-            user_info['active_status'] = self.getStatus(user)
+            user_info['active_status'] = self.context.aq_inner.getStatus(user)
             results.append(user_info)
 
         # Sort the users by fullname
@@ -258,26 +258,33 @@ class UserSearchView(UsersGroupsControlPanelView):
 
     def getGroups(self, user):
         """Get user groups."""
+        if not user:
+            return ""
+
         context = self.context.aq_inner
         portal_groups = getToolByName(context, 'portal_groups')
-        group_names = []
+
+        login_manage_by_groups = context.get_manage_by_groups()
+        print "login_manage_by_groups %s" % login_manage_by_groups
         user_group_ids = user.getGroups()
+        user_groups = user_group_ids
+        if context.manage_all not in login_manage_by_groups:
+            user_groups = set(login_manage_by_groups) & set(user_group_ids)
+
         # how we get pool user groups, generic?
-        for user_group_id in user_group_ids:
+        group_names = []
+        for user_group_id in user_groups:
             user_group = portal_groups.getGroupById(user_group_id)
             # group may not yet exist
-            group_name = user_group_id
+            group_name = ""
             if user_group is not None:
-                group_name = user_group.getProperty('title')
+                group_name = user_group.getProperty("title", "")
                 if not group_name:
+                    # don't have title, use id
                     group_name = user_group_id
             if group_name:
                 group_names.append(group_name)
         return ", ".join(group_names)
-
-    def getStatus(self, user):
-        """Get user status."""
-        return self.context.aq_inner.getStatus(user)
 
 class UserProfileView(BrowserView):
 

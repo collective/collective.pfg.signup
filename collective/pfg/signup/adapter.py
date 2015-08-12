@@ -754,28 +754,42 @@ class SignUpAdapter(FormActionAdapter):
         print "manage_group %s" % manage_group
         return manage_group
 
-    def get_manage_by_groups(self):
-        """Return a list of group ids that manage by current login user.
+    def get_manager_groups(self, manager=""):
+        """Return common manager groups.
 
-        '*' meaning all users. Compare current login user with
-        management dictionary keys.
+        If manager parameter is not provided, Current login user will used.
         """
         portal_membership = getToolByName(self, 'portal_membership')
         portal_groups = getToolByName(self, 'portal_groups')
+        acl = getToolByName(self, 'acl_users')
 
-        if portal_membership.isAnonymousUser():
+        if manager:
+            current_user = acl.getUserById(userId)
+        elif portal_membership.isAnonymousUser():
             return []
+        else:
+            current_user = portal_membership.getAuthenticatedMember()
 
-        current_user = portal_membership.getAuthenticatedMember()
         user_groups = current_user.getGroups()
-
         user_management_list = self.get_management_dict()
         common_groups = set(user_management_list.keys()) & set(user_groups)
         print "common_groups %s" % common_groups
 
+        return common_groups
+
+    def get_manage_by_groups(self, manager=""):
+        """Return a list of group ids that manage by manager.
+
+        '*' meaning all users.
+        If manager parameter is not provided, current login user will used.
+        """
+        user_management_list = self.get_management_dict()
+        common_groups = self.get_manager_groups(manager)
         manage_by_group = []
 
         for common_group in common_groups:
+            if common_group not in user_management_list:
+                continue
             manage_user_group = user_management_list[common_group]
             if self.manage_all in manage_user_group:
                 manage_by_group = [self.manage_all]
