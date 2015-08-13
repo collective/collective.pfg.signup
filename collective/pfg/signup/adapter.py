@@ -18,6 +18,7 @@ from Products.TALESField import TALESString
 from collective.pfg.signup import _
 from collective.pfg.signup.config import PROJECTNAME
 from collective.pfg.signup.interfaces import ISignUpAdapter
+from datetime import datetime
 from email import message_from_string
 from smtplib import SMTPRecipientsRefused
 from smtplib import SMTPServerDisconnected
@@ -357,9 +358,23 @@ class SignUpAdapter(FormActionAdapter):
         # is populated with the values from portal_memberdata property sheet,
         # so value="" will be the default value for users' home_folder_uid
         # member property
+        if not portal_memberdata.hasProperty("approved_by"):
+            portal_memberdata.manage_addProperty(
+                id="approved_by", value="", type="string")
+        # PAS does not understand datetime or DateTime,
+        # so we have to use string instead
+        if not portal_memberdata.hasProperty("approved_date"):
+            portal_memberdata.manage_addProperty(
+                id="approved_date", value="", type="string")
+
         if not portal_memberdata.hasProperty("last_updated_by"):
             portal_memberdata.manage_addProperty(
                 id="last_updated_by", value="", type="string")
+        # PAS does not understand datetime or DateTime,
+        # so we have to use string instead
+        if not portal_memberdata.hasProperty("last_updated_date"):
+            portal_memberdata.manage_addProperty(
+                id="last_updated_date", value="", type="string")
 
     def create_member(self, request, data, reset_password=False):
         """Create member."""
@@ -377,11 +392,18 @@ class SignUpAdapter(FormActionAdapter):
             # need to also pass username in properties, otherwise the user
             # isn't found when setting the properties
             try:
+                current_user_id = ""
+                if not portal_membership.isAnonymousUser():
+                    current_user = portal_membership.getAuthenticatedMember()
+                    current_user_id = current_user.id
+                current_time = datetime.now().strftime("%d %B %Y %I:%M %p")
                 member = portal_registration.addMember(
                     username, data['password'], [],
                     properties={'username': username,
                                 'fullname': data['fullname'],
-                                'email': data['email']})
+                                'email': data['email'],
+                                'approved_by': current_user_id,
+                                'approved_date': current_time})
             except(AttributeError, ValueError), err:
                 logging.exception(err)
                 return {FORM_ERROR_MARKER: err}
@@ -402,11 +424,6 @@ class SignUpAdapter(FormActionAdapter):
         portal_membership = getToolByName(self, 'portal_membership')
         portal_registration = getToolByName(self, 'portal_registration')
         portal_groups = getToolByName(self, 'portal_groups')
-
-        if portal_membership.isAnonymousUser():
-            self.plone_utils.addPortalMessage(
-                _(u'You need to login to access this page.'))
-            return
 
         if not user_id:
             self.plone_utils.addPortalMessage(
@@ -429,12 +446,16 @@ class SignUpAdapter(FormActionAdapter):
             return
 
         try:
-            print "update fullname %s" % user_fullname
-            current_user = portal_membership.getAuthenticatedMember()
+            current_user_id = ""
+            if not portal_membership.isAnonymousUser():
+                current_user = portal_membership.getAuthenticatedMember()
+                current_user_id = current_user.id
+            current_time = datetime.now().strftime("%d %B %Y %I:%M %p")
             # update user_last_updated_date and user_last_updated_by
             user.setMemberProperties({
                 'fullname': user_fullname,
-                'last_updated_by': current_user.id})
+                'last_updated_by': current_user_id,
+                'last_updated_date': current_time})
         except(AttributeError, ValueError), err:
             logging.exception(err)
             return {FORM_ERROR_MARKER: err}
