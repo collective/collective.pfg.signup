@@ -20,16 +20,25 @@
                     <input type="hidden"
                            name="userid"
                            value="userid"
-                           tal:attributes="value view/userid;" />
+                           tal:attributes="value view/userid" />
                            <table class="plain">
                                <tbody>
                                    <tr>
-                                       <th>Full name</th>
-                                       <td><span class="TEXTFieldRead-TEXT" tal:replace="view/user_fullname">username</span></td>
+                                       <th><label for="fullname">Full Name</label></th>
+                                       <td><input name="fullname" id="fullname" size="30" maxlength="255" type="text" tal:attributes="value view/user_fullname"></td>
                                    </tr>
                                    <tr>
-                                       <th>User group</th>
-                                       <td><span class="TEXTFieldRead-TEXT" tal:replace="view/user_group">Super user</span></td>
+                                       <th><label for="user-group">User group</label></th>
+                                       <td>
+                                           <select name="role" id="role">
+                                               <tal:block repeat="group view/user_group">
+                                                    <option value="admin"
+                                                            tal:attributes="value group/group_id">
+                                                        <span tal:replace="group/group_title">Admin</span>
+                                                    </option>
+                                               </tal:block>
+                                            </select>
+                                        </td>
                                    </tr>
                                    <tr>
                                        <th>Username / email</th>

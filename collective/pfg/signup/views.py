@@ -445,7 +445,6 @@ class UserEditView(BrowserView):
             if not same_groups:
                 return self.index()
 
-
         self.user_fullname = user.getProperty('fullname', '')
         self.user_email = user.getProperty('email', '')
         self.user_status = self.context.aq_inner.get_status(user)
@@ -454,6 +453,6 @@ class UserEditView(BrowserView):
         # TODO(ivan) change to combo box.
         edit_user_groups = set(manage_by_group) | set(manager_groups)
         group_names = context.get_groups_title(edit_user_groups)
-        self.user_group = ", ".join(group_names)
+        self.user_group = [{"group_id": group_name, "group_title": group_name} for group_name in group_names]
 
         return self.index()
