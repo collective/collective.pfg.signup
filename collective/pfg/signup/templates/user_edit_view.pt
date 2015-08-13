@@ -32,10 +32,20 @@
                                        <td>
                                            <select name="role" id="role">
                                                <tal:block repeat="group view/user_group">
-                                                    <option value="admin"
-                                                            tal:attributes="value group/group_id">
-                                                        <span tal:replace="group/group_title">Admin</span>
-                                                    </option>
+                                                   <tal:block tal:define="is_current python:'current' in group and group['current']" >
+                                                       <tal:block tal:condition="is_current" >
+                                                           <option value="admin" selected="selected"
+                                                                   tal:attributes="value group/group_id">
+                                                               <span tal:replace="group/group_title">Admin</span>
+                                                           </option>
+                                                       </tal:block>
+                                                       <tal:block tal:condition="not:is_current" >
+                                                           <option value="admin"
+                                                                   tal:attributes="value group/group_id">
+                                                               <span tal:replace="group/group_title">Admin</span>
+                                                           </option>
+                                                       </tal:block>
+                                                   </tal:block>
                                                </tal:block>
                                             </select>
                                         </td>

@@ -751,7 +751,6 @@ class SignUpAdapter(FormActionAdapter):
         expression_context = getExprContext(self, self.aq_parent)
         manage_group = self.getManage_group_template(
             expression_context=expression_context)
-        print "manage_group %s" % manage_group
         return manage_group
 
     def get_manager_groups(self, manager=""):
@@ -773,8 +772,6 @@ class SignUpAdapter(FormActionAdapter):
         user_groups = current_user.getGroups()
         user_management_list = self.get_management_dict()
         common_groups = set(user_management_list.keys()) & set(user_groups)
-        print "common_groups %s" % common_groups
-
         return common_groups
 
     def get_manage_by_groups(self, manager=""):
@@ -795,7 +792,6 @@ class SignUpAdapter(FormActionAdapter):
                 manage_by_group = [self.manage_all]
                 break
             manage_by_group += manage_user_group
-        print "manage_by_group %s" % manage_by_group
 
         return manage_by_group
 
@@ -812,7 +808,7 @@ class SignUpAdapter(FormActionAdapter):
         return status
 
     def get_groups_title(self, user_groups):
-        """Return groups name title."""
+        """Return groups id and title as dictionary."""
         acl_users = getToolByName(self, 'acl_users')
         portal_groups = getToolByName(self, 'portal_groups')
 
@@ -822,6 +818,7 @@ class SignUpAdapter(FormActionAdapter):
 
         group_names = []
         for user_group_id in user_groups:
+            # {"group_id": group_name, "group_title": group_name}
             user_group = portal_groups.getGroupById(user_group_id)
             # group may not yet exist
             group_name = ""
@@ -831,7 +828,8 @@ class SignUpAdapter(FormActionAdapter):
                     # don't have title, use id
                     group_name = user_group_id
             if group_name:
-                group_names.append(group_name)
+                group_names.append(
+                    {"group_id": user_group_id, "group_title": group_name})
         return group_names
 
 

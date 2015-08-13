@@ -144,9 +144,6 @@ class UserSearchView(UsersGroupsControlPanelView):
         user_management_list = self.context.aq_inner.get_management_dict()
         manage_by_group = self.context.aq_inner.get_manage_by_groups()
         manage_all = self.context.aq_inner.get_manage_all()
-        print "user_management_list %s" % user_management_list
-        print "manage_by_group %s" % manage_by_group
-        print "manage_all %s" % manage_all
 
         if sm.checkPermission(ManagePortal, portal) and not manage_by_group:
             # show all for adminstratior/manager
@@ -208,8 +205,6 @@ class UserSearchView(UsersGroupsControlPanelView):
                 # TODO((ivan) limit the search instead of doing it after that
                 user_groups = user.getGroups()
                 same_groups = set(manage_by_group) & set(user_groups)
-                print "user_groups %s" % user_groups
-                print "same_groups %s" % same_groups
                 if not same_groups:
                     continue
 
@@ -262,14 +257,13 @@ class UserSearchView(UsersGroupsControlPanelView):
 
         context = self.context.aq_inner
         login_manage_by_groups = context.get_manage_by_groups()
-        print "login_manage_by_groups %s" % login_manage_by_groups
         user_group_ids = user.getGroups()
         user_groups = user_group_ids
         if context.manage_all not in login_manage_by_groups:
             user_groups = set(login_manage_by_groups) & set(user_group_ids)
 
         group_names = context.get_groups_title(user_groups)
-        return ", ".join(group_names)
+        return ", ".join([group_name["group_title"] for group_name in group_names])
 
 class UserProfileView(BrowserView):
 
@@ -328,9 +322,6 @@ class UserProfileView(BrowserView):
         user_management_list = self.context.aq_inner.get_management_dict()
         manage_by_group = self.context.aq_inner.get_manage_by_groups()
         manage_all = self.context.aq_inner.get_manage_all()
-        print "user_management_list %s" % user_management_list
-        print "manage_by_group %s" % manage_by_group
-        print "manage_all %s" % manage_all
 
         if sm.checkPermission(ManagePortal, portal) and not manage_by_group:
             # show all for adminstratior/manager
@@ -358,7 +349,7 @@ class UserProfileView(BrowserView):
         self.user_status = self.context.aq_inner.get_status(user)
         # display the groups based from the login user management list
         group_names = context.get_groups_title(same_groups)
-        self.user_group = ", ".join(group_names)
+        self.user_group = ", ".join([group_name["group_title"] for group_name in group_names])
 
         return self.index()
 
@@ -420,9 +411,6 @@ class UserEditView(BrowserView):
         manager_groups = self.context.aq_inner.get_manager_groups()
         manage_by_group = self.context.aq_inner.get_manage_by_groups()
         manage_all = self.context.aq_inner.get_manage_all()
-        print "user_management_list %s" % user_management_list
-        print "manage_by_group %s" % manage_by_group
-        print "manage_all %s" % manage_all
 
         if sm.checkPermission(ManagePortal, portal) and not manage_by_group:
             # show all for adminstratior/manager
@@ -453,6 +441,14 @@ class UserEditView(BrowserView):
         # TODO(ivan) change to combo box.
         edit_user_groups = set(manage_by_group) | set(manager_groups)
         group_names = context.get_groups_title(edit_user_groups)
-        self.user_group = [{"group_id": group_name, "group_title": group_name} for group_name in group_names]
+        # find the current groups
+        current_group_name = list(same_groups)[0]
+        print "current_group_name %s" % current_group_name
+        for group_name in group_names:
+            if group_name["group_id"] == current_group_name:
+                group_name["current"] = True
+                break
+        print "group_names %s" % group_names
+        self.user_group = group_names
 
         return self.index()
