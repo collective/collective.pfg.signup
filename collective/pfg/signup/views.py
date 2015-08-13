@@ -383,13 +383,18 @@ class UserEditView(BrowserView):
         # If you are unsure what this means always use context.aq_inner
         context = self.context.aq_inner
         self.userid = self.request.get("userid", "")
+        self.field_fullname = self.request.get("fullname", "")
+        self.field_user_group = self.request.get("user-group", "")
         self.user_save = self.request.get("form.button.save", "")
         self.user_cancel = self.request.get("form.button.cancel", "")
         print "UserEditView call: %s" % self.userid
+        print "field_fullname call: %s" % self.field_fullname
+        print "field_user_group call: %s" % self.field_user_group
         print "user_save call: %s" % self.user_save
         print "user_cancel call: %s" % self.user_cancel
 
-        if self.user_cancel == "Cancel":
+        # "Cancel" action
+        if self.user_cancel:
             profile_view = "%s/user_profile_view?userid=%s" % (
                 self.context.absolute_url(), self.userid)
             self.request.response.redirect(profile_view)
@@ -424,12 +429,11 @@ class UserEditView(BrowserView):
             return self.index()
 
         user_groups = user.getGroups()
+        print "current all user groups: %s" % user_groups
         same_groups = user_groups
         if manage_all not in manage_by_group:
             # TODO(ivan) limit the search instead of doing it after that
             same_groups = set(manage_by_group) & set(user_groups)
-            print "user_groups %s" % user_groups
-            print "same_groups %s" % same_groups
             if not same_groups:
                 return self.index()
 
@@ -443,12 +447,23 @@ class UserEditView(BrowserView):
         group_names = context.get_groups_title(edit_user_groups)
         # find the current groups
         current_group_name = list(same_groups)[0]
-        print "current_group_name %s" % current_group_name
         for group_name in group_names:
             if group_name["group_id"] == current_group_name:
                 group_name["current"] = True
                 break
-        print "group_names %s" % group_names
         self.user_group = group_names
+
+        # "Save" action
+        if self.user_save:
+            self.context.aq_inner.update_member(
+                self.request,
+                self.userid,
+                self.field_fullname,
+                current_group_name,
+                self.field_user_group)
+
+            profile_view = "%s/user_profile_view?userid=%s" % (
+                self.context.absolute_url(), self.userid)
+            self.request.response.redirect(profile_view)
 
         return self.index()

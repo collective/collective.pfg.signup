@@ -378,7 +378,46 @@ class SignUpAdapter(FormActionAdapter):
                 portal_registration.mailPassword(username, request)
 
         else:
-            return {FORM_ERROR_MARKER: "This user already exists"}
+            return {FORM_ERROR_MARKER: _("This user already exists.")}
+
+    def update_member(self, request, user_id, user_fullname, current_group, new_group):
+        """Update member with full name and / or group."""
+        portal_membership = getToolByName(self, 'portal_membership')
+        portal_registration = getToolByName(self, 'portal_registration')
+        portal_groups = getToolByName(self, 'portal_groups')
+        if not user_id:
+            self.plone_utils.addPortalMessage(
+                _(u'User ID is not valid.'))
+            return {FORM_ERROR_MARKER: _(u'User ID is not valid.')}
+        user = portal_membership.getMemberById(user_id)
+        if not user:
+            self.plone_utils.addPortalMessage(
+                _(u'This user does not exists.'))
+            return {FORM_ERROR_MARKER: _(u'This user does not exists.')}
+
+        if not new_group:
+            self.plone_utils.addPortalMessage(
+                _(u'User group is not valid.'))
+            return {FORM_ERROR_MARKER: _(u'User group is not valid.')}
+        new_user_group = portal_groups.getGroupById(new_group)
+        if not new_user_group:
+            self.plone_utils.addPortalMessage(
+                _(u'This user group does not exists.'))
+            return {FORM_ERROR_MARKER: _(u'This user group does not exists.')}
+
+        try:
+            print "update fullname %s" % user_fullname
+            user.setMemberProperties({'fullname': user_fullname})
+        except(AttributeError, ValueError), err:
+            logging.exception(err)
+            return {FORM_ERROR_MARKER: err}
+
+        if current_group != new_group:
+            print "update from %s to %s" % (current_group, new_user_group)
+            portal_groups.removePrincipalFromGroup(user_id, current_group)
+            portal_groups.addPrincipalToGroup(user_id, new_group)
+
+        return
 
     def create_group(self, user_group, title=None, email=None):
         """Create the group."""

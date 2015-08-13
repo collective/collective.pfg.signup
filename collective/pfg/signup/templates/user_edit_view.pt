@@ -30,7 +30,7 @@
                                    <tr>
                                        <th><label for="user-group">User group</label></th>
                                        <td>
-                                           <select name="role" id="role">
+                                           <select name="user-group" id="user-group">
                                                <tal:block repeat="group view/user_group">
                                                    <tal:block tal:define="is_current python:'current' in group and group['current']" >
                                                        <tal:block tal:condition="is_current" >
