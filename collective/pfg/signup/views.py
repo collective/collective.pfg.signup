@@ -346,6 +346,9 @@ class UserProfileView(BrowserView):
 
         self.user_fullname = user.getProperty('fullname', '')
         self.user_email = user.getProperty('email', '')
+        last_updated_by = user.getProperty('last_updated_by', '')
+        self.user_last_updated_by = self.context.aq_inner.get_user_name(
+            last_updated_by)
         self.user_status = self.context.aq_inner.get_status(user)
         # display the groups based from the login user management list
         group_names = context.get_groups_title(same_groups)
@@ -439,6 +442,9 @@ class UserEditView(BrowserView):
 
         self.user_fullname = user.getProperty('fullname', '')
         self.user_email = user.getProperty('email', '')
+        last_updated_by = user.getProperty('last_updated_by', '')
+        self.user_last_updated_by = self.context.aq_inner.get_user_name(
+            last_updated_by)
         self.user_status = self.context.aq_inner.get_status(user)
         # in edit page, login user allow to assign the user to the group that
         # they allow and its own groups as well.

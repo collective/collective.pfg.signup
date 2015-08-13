@@ -347,6 +347,20 @@ class SignUpAdapter(FormActionAdapter):
         result = self.create_member(request, data, False)
         return result
 
+    def prepare_member_properties(self):
+        """ Adjust site for custom member properties """
+
+        # Need to use ancient Z2 property sheet API here...
+        portal_memberdata = getToolByName(self, "portal_memberdata")
+
+        # When new member is created, its MemberData
+        # is populated with the values from portal_memberdata property sheet,
+        # so value="" will be the default value for users' home_folder_uid
+        # member property
+        if not portal_memberdata.hasProperty("last_updated_by"):
+            portal_memberdata.manage_addProperty(
+                id="last_updated_by", value="", type="string")
+
     def create_member(self, request, data, reset_password=False):
         """Create member."""
         portal_membership = getToolByName(self, 'portal_membership')
@@ -382,40 +396,67 @@ class SignUpAdapter(FormActionAdapter):
 
     def update_member(self, request, user_id, user_fullname, current_group, new_group):
         """Update member with full name and / or group."""
+        # If we use custom member properties they must be initialized
+        # before regtool is called
+        self.prepare_member_properties()
         portal_membership = getToolByName(self, 'portal_membership')
         portal_registration = getToolByName(self, 'portal_registration')
         portal_groups = getToolByName(self, 'portal_groups')
+
+        if portal_membership.isAnonymousUser():
+            self.plone_utils.addPortalMessage(
+                _(u'You need to login to access this page.'))
+            return
+
         if not user_id:
             self.plone_utils.addPortalMessage(
                 _(u'User ID is not valid.'))
-            return {FORM_ERROR_MARKER: _(u'User ID is not valid.')}
+            return
         user = portal_membership.getMemberById(user_id)
         if not user:
             self.plone_utils.addPortalMessage(
                 _(u'This user does not exists.'))
-            return {FORM_ERROR_MARKER: _(u'This user does not exists.')}
+            return
 
         if not new_group:
             self.plone_utils.addPortalMessage(
                 _(u'User group is not valid.'))
-            return {FORM_ERROR_MARKER: _(u'User group is not valid.')}
+            return
         new_user_group = portal_groups.getGroupById(new_group)
         if not new_user_group:
             self.plone_utils.addPortalMessage(
                 _(u'This user group does not exists.'))
-            return {FORM_ERROR_MARKER: _(u'This user group does not exists.')}
+            return
 
         try:
             print "update fullname %s" % user_fullname
-            user.setMemberProperties({'fullname': user_fullname})
+            current_user = portal_membership.getAuthenticatedMember()
+            # update user_last_updated_date and user_last_updated_by
+            user.setMemberProperties({
+                'fullname': user_fullname,
+                'last_updated_by': current_user.id})
         except(AttributeError, ValueError), err:
             logging.exception(err)
             return {FORM_ERROR_MARKER: err}
 
         if current_group != new_group:
             print "update from %s to %s" % (current_group, new_user_group)
-            portal_groups.removePrincipalFromGroup(user_id, current_group)
-            portal_groups.addPrincipalToGroup(user_id, new_group)
+            try:
+                portal_groups.removePrincipalFromGroup(user_id, current_group)
+            except(KeyError), err:
+                error_string = _(u'Can not remove group: %s.') % err
+                logging.exception(error_string)
+                self.plone_utils.addPortalMessage(error_string)
+                return
+
+
+            try:
+                portal_groups.addPrincipalToGroup(user_id, new_group)
+            except(KeyError), err:
+                error_string = _(u'Can not add group: %s.') % err
+                logging.exception(error_string)
+                self.plone_utils.addPortalMessage(error_string)
+                return
 
         return
 
@@ -840,11 +881,30 @@ class SignUpAdapter(FormActionAdapter):
 
     def get_status(self, user):
         """Return user status."""
+        if not user:
+            return ""
+
         user_group_ids = user.getGroups()
         status = _("Active")
         if len(user_group_ids) == 1 and 'AuthenticatedUsers' in user_group_ids:
             status = _("Inactive")
         return status
+
+    def get_user_name(self, user_id):
+        """Return user name."""
+        if not user_id:
+            return ""
+
+        portal_membership = getToolByName(self, 'portal_membership')
+        user = portal_membership.getMemberById(user_id)
+        if not user:
+            return ""
+
+        user_fullname = user.getProperty('fullname', '')
+        if user_fullname:
+            return user_fullname
+
+        return user_id
 
     def get_groups_title(self, user_groups):
         """Return groups id and title as dictionary."""
