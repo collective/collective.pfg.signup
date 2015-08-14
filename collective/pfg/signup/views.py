@@ -118,6 +118,7 @@ class UserSearchView(UsersGroupsControlPanelView):
         search = form.get('form.button.Search', None) is not None
         findAll = form.get('form.button.FindAll', None) is not None
         self.user_groups = form.get('user-groups', '')
+        print "self.user_groups: %s" % self.user_groups
         self.searchString = not findAll and form.get('searchstring', '') or ''
         self.searchResults = []
         self.newSearch = False
@@ -126,10 +127,10 @@ class UserSearchView(UsersGroupsControlPanelView):
             self.newSearch = True
 
         # Custom code: allow user to filter user groups.
-        manager_groups = context.get_manager_groups()
+        # manager_groups = context.get_manager_groups()
         manage_by_group = context.get_manage_by_groups()
-        all_user_groups = set(manage_by_group) | set(manager_groups)
-        self.search_user_groups = context.get_groups_title(all_user_groups)
+        # all_user_groups = set(manage_by_group) | set(manager_groups)
+        self.search_user_groups = context.get_groups_title(manage_by_group)
 
         # Only search for all ('') if the many_users flag is not set.
         if not self.many_users or bool(self.searchString):
@@ -195,6 +196,10 @@ class UserSearchView(UsersGroupsControlPanelView):
             **{field: searchString}) for field in [
                 'login', 'fullname', 'email']]), 'userid')
 
+        if self.user_groups and type(self.user_groups) != list:
+            self.user_groups = [self.user_groups]
+        print "user_groups: %s %s" % (self.user_groups, type(self.user_groups))
+
         # Tack on some extra data, including whether each role is explicitly
         # assigned ('explicit'), inherited ('inherited'), or not assigned at
         # all (None).
@@ -209,11 +214,18 @@ class UserSearchView(UsersGroupsControlPanelView):
                     'Skipped user without principal object: %s' % userId)
                 continue
 
+            this_user_groups = user.getGroups()
             if manage_all not in manage_by_group:
                 # TODO((ivan) limit the search instead of doing it after that
-                user_groups = user.getGroups()
-                same_groups = set(manage_by_group) & set(user_groups)
+                same_groups = set(manage_by_group) & set(this_user_groups)
                 if not same_groups:
+                    continue
+
+            if self.user_groups:
+                filter_groups = set(self.user_groups) & set(this_user_groups)
+                print "this_user_groups: %s" % this_user_groups
+                print "filter_groups: %s" % filter_groups
+                if not filter_groups:
                     continue
 
             explicitlyAssignedRoles = []
@@ -433,7 +445,7 @@ class UserEditView(BrowserView):
         portal = getUtility(ISiteRoot)
 
         user_management_list = context.get_management_dict()
-        manager_groups = context.get_manager_groups()
+        # manager_groups = context.get_manager_groups()
         manage_by_group = context.get_manage_by_groups()
         manage_all = context.get_manage_all()
 
@@ -471,8 +483,8 @@ class UserEditView(BrowserView):
         self.user_status = context.get_status(user)
         # in edit page, login user allow to assign the user to the group that
         # they allow and its own groups as well.
-        edit_user_groups = set(manage_by_group) | set(manager_groups)
-        group_names = self.context.get_groups_title(edit_user_groups)
+        # edit_user_groups = set(manage_by_group) | set(manager_groups)
+        group_names = self.context.get_groups_title(manage_by_group)
         # find the current groups
         current_group_name = list(same_groups)[0]
         for group_name in group_names:

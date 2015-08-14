@@ -54,7 +54,7 @@
                                          />
 
                                   <span tal:omit-tag="" i18n:translate="label_user_group">User Group</span>:
-                                  <select name="user-groups" id="user-groups">
+                                  <select name="user-groups" id="user-groups" multiple="multiple">
                                       <tal:block repeat="group view/search_user_groups">
                                           <option value="admin"
                                                   tal:attributes="value group/group_id">
