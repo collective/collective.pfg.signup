@@ -378,6 +378,7 @@ class SignUpAdapter(FormActionAdapter):
 
     def create_member(self, request, data, reset_password=False):
         """Create member."""
+        self.prepare_member_properties()
         portal_membership = getToolByName(self, 'portal_membership')
         portal_registration = getToolByName(self, 'portal_registration')
         portal_groups = getToolByName(self, 'portal_groups')
