@@ -76,8 +76,10 @@
                                    </tr>
                                </tbody>
                            </table>
-                    <input type="submit" value="Save" name="form.button.save">
-                    <input type="submit" value="Cancel" name="form.button.cancel">
+                    <tal:block tal:condition="view/userid" >
+                        <input type="submit" value="Save" name="form.button.save">
+                        <input type="submit" value="Cancel" name="form.button.cancel">
+                    </tal:block>
                 </form>
             </div>
         </metal:core>

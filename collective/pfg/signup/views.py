@@ -117,6 +117,7 @@ class UserSearchView(UsersGroupsControlPanelView):
         # submitted = form.get('form.submitted', False)
         search = form.get('form.button.Search', None) is not None
         findAll = form.get('form.button.FindAll', None) is not None
+        self.user_groups = form.get('user-groups', '')
         self.searchString = not findAll and form.get('searchstring', '') or ''
         self.searchResults = []
         self.newSearch = False
@@ -127,9 +128,8 @@ class UserSearchView(UsersGroupsControlPanelView):
         # Custom code: allow user to filter user groups.
         manager_groups = context.get_manager_groups()
         manage_by_group = context.get_manage_by_groups()
-
-        search_user_groups = set(manage_by_group) | set(manager_groups)
-        self.user_group = context.get_groups_title(search_user_groups)
+        all_user_groups = set(manage_by_group) | set(manager_groups)
+        self.search_user_groups = context.get_groups_title(all_user_groups)
 
         # Only search for all ('') if the many_users flag is not set.
         if not self.many_users or bool(self.searchString):
@@ -283,9 +283,6 @@ class UserProfileView(BrowserView):
         self.context = context
         self.request = request
         self.userid = self.request.get("userid", "")
-        self.user_edit = self.request.get("form.button.edit", "")
-        self.user_activate = self.request.get("form.button.activate", "")
-        self.user_deactivate = self.request.get("form.button.deactivate", "")
         self.user_fullname = ""
         self.user_group = ""
         self.user_email = ""
@@ -304,10 +301,11 @@ class UserProfileView(BrowserView):
         # acquisition chain leading to the portal root.
         # If you are unsure what this means always use context.aq_inner
         context = self.context.aq_inner
-        self.userid = self.request.get("userid", "")
-        self.user_edit = self.request.get("form.button.edit", "")
-        self.user_activate = self.request.get("form.button.activate", "")
-        self.user_deactivate = self.request.get("form.button.deactivate", "")
+        form = self.request.form
+        self.userid = form.get("userid", "")
+        self.user_edit = form.get("form.button.edit", None) is not None
+        self.user_activate = form.get("form.button.activate", None) is not None
+        self.user_deactivate = form.get("form.button.deactivate", None) is not None
         print "UserProfileView call: %s" % self.userid
         print "user_edit call: %s" % self.user_edit
         print "user_activate call: %s" % self.user_activate
@@ -316,7 +314,7 @@ class UserProfileView(BrowserView):
         if not self.userid:
             return self.index()
 
-        if self.user_edit == "Edit":
+        if self.user_edit:
             edit_view = "%s/user_edit_view?userid=%s" % (
                 self.context.absolute_url(), self.userid)
             self.request.response.redirect(edit_view)
@@ -344,6 +342,8 @@ class UserProfileView(BrowserView):
 
         user = portal_membership.getMemberById(self.userid)
         if not user:
+            context.plone_utils.addPortalMessage(
+                _(u'This user does not exists.'))
             return self.index()
 
         user_groups = user.getGroups()
@@ -397,9 +397,6 @@ class UserEditView(BrowserView):
         """Initial this browser view."""
         self.context = context
         self.request = request
-        self.userid = self.request.get("userid", "")
-        self.user_save = self.request.get("form.button.save", "")
-        self.user_cancel = self.request.get("form.button.cancel", "")
         self.user_fullname = ""
         self.user_group = ""
         self.user_email = ""
@@ -417,11 +414,12 @@ class UserEditView(BrowserView):
         # acquisition chain leading to the portal root.
         # If you are unsure what this means always use context.aq_inner
         context = self.context.aq_inner
-        self.userid = self.request.get("userid", "")
-        self.field_fullname = self.request.get("fullname", "")
-        self.field_user_group = self.request.get("user-group", "")
-        self.user_save = self.request.get("form.button.save", "")
-        self.user_cancel = self.request.get("form.button.cancel", "")
+        form = self.request.form
+        self.userid = form.get("userid", "")
+        self.field_fullname = form.get("fullname", "")
+        self.field_user_group = form.get("user-group", "")
+        self.user_save = form.get("form.button.save", None) is not None
+        self.user_cancel = form.get("form.button.cancel", None) is not None
         print "UserEditView call: %s" % self.userid
         print "field_fullname call: %s" % self.field_fullname
         print "field_user_group call: %s" % self.field_user_group
@@ -461,6 +459,8 @@ class UserEditView(BrowserView):
 
         user = portal_membership.getMemberById(self.userid)
         if not user:
+            context.plone_utils.addPortalMessage(
+                _(u'This user does not exists.'))
             return self.index()
 
         user_groups = user.getGroups()

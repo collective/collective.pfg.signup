@@ -53,9 +53,9 @@
                                          tal:attributes="value view/searchString;"
                                          />
 
-                                  <span tal:omit-tag="" i18n:translate="label_user_search">User Group</span>:
-                                  <select name="user-group" id="user-group">
-                                      <tal:block repeat="group view/user_group">
+                                  <span tal:omit-tag="" i18n:translate="label_user_group">User Group</span>:
+                                  <select name="user-groups" id="user-groups">
+                                      <tal:block repeat="group view/search_user_groups">
                                           <option value="admin"
                                                   tal:attributes="value group/group_id">
                                               <span tal:replace="group/group_title">Admin</span>
