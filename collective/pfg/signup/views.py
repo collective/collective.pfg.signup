@@ -124,6 +124,13 @@ class UserSearchView(UsersGroupsControlPanelView):
         if search or findAll:
             self.newSearch = True
 
+        # Custom code: allow user to filter user groups.
+        manager_groups = context.get_manager_groups()
+        manage_by_group = context.get_manage_by_groups()
+
+        search_user_groups = set(manage_by_group) | set(manager_groups)
+        self.user_group = context.get_groups_title(search_user_groups)
+
         # Only search for all ('') if the many_users flag is not set.
         if not self.many_users or bool(self.searchString):
             self.searchResults = self.doSearch(self.searchString)
@@ -133,6 +140,7 @@ class UserSearchView(UsersGroupsControlPanelView):
     def doSearch(self, searchString):
         """Search users."""
         # TODO(ivan): not sure do we need these code below? should delete?
+        context = self.context.aq_inner
         acl = getToolByName(self, 'acl_users')
         rolemakers = acl.plugins.listPlugins(IRolesPlugin)
 
@@ -141,9 +149,9 @@ class UserSearchView(UsersGroupsControlPanelView):
         sm = getSecurityManager()
         portal = getUtility(ISiteRoot)
 
-        user_management_list = self.context.aq_inner.get_management_dict()
-        manage_by_group = self.context.aq_inner.get_manage_by_groups()
-        manage_all = self.context.aq_inner.get_manage_all()
+        user_management_list = context.get_management_dict()
+        manage_by_group = context.get_manage_by_groups()
+        manage_all = context.get_manage_all()
 
         if sm.checkPermission(ManagePortal, portal) and not manage_by_group:
             # show all for adminstratior/manager
@@ -238,7 +246,7 @@ class UserSearchView(UsersGroupsControlPanelView):
             user_info['can_set_email'] = user.canWriteProperty('email')
             user_info['can_set_password'] = canPasswordSet
             user_info['council_group'] = self.getGroups(user)
-            user_info['user_status'] = self.context.aq_inner.get_status(user)
+            user_info['user_status'] = context.get_status(user)
             results.append(user_info)
 
         # Sort the users by fullname
@@ -323,9 +331,9 @@ class UserProfileView(BrowserView):
         sm = getSecurityManager()
         portal = getUtility(ISiteRoot)
 
-        user_management_list = self.context.aq_inner.get_management_dict()
-        manage_by_group = self.context.aq_inner.get_manage_by_groups()
-        manage_all = self.context.aq_inner.get_manage_all()
+        user_management_list = context.get_management_dict()
+        manage_by_group = context.get_manage_by_groups()
+        manage_all = context.get_manage_all()
 
         if sm.checkPermission(ManagePortal, portal) and not manage_by_group:
             # show all for adminstratior/manager
@@ -351,28 +359,28 @@ class UserProfileView(BrowserView):
         self.user_fullname = user.getProperty('fullname', '')
         self.user_email = user.getProperty('email', '')
         approved_by = user.getProperty('approved_by', '')
-        self.user_approved_by = self.context.aq_inner.get_user_name(
+        self.user_approved_by = context.get_user_name(
             approved_by)
         self.user_approved_date = user.getProperty('approved_date', '')
         last_updated_by = user.getProperty('last_updated_by', '')
-        self.user_last_updated_by = self.context.aq_inner.get_user_name(
+        self.user_last_updated_by = context.get_user_name(
             last_updated_by)
         self.user_last_updated_date = user.getProperty('last_updated_date', '')
-        self.user_status = self.context.aq_inner.get_status(user)
-        self.user_is_active = self.context.aq_inner.is_active(user)
+        self.user_status = context.get_status(user)
+        self.user_is_active = context.is_active(user)
         # display the groups based from the login user management list
         group_names = context.get_groups_title(same_groups)
         self.user_group = ", ".join([group_name["group_title"] for group_name in group_names])
 
         if self.user_activate:
-            self.context.aq_inner.user_activate(self.userid)
+            context.user_activate(self.userid)
 
             profile_view = "%s/user_profile_view?userid=%s" % (
                 self.context.absolute_url(), self.userid)
             self.request.response.redirect(profile_view)
 
         if self.user_deactivate:
-            self.context.aq_inner.user_deactivate(self.userid)
+            context.user_deactivate(self.userid)
 
             profile_view = "%s/user_profile_view?userid=%s" % (
                 self.context.absolute_url(), self.userid)
@@ -439,10 +447,10 @@ class UserEditView(BrowserView):
         sm = getSecurityManager()
         portal = getUtility(ISiteRoot)
 
-        user_management_list = self.context.aq_inner.get_management_dict()
-        manager_groups = self.context.aq_inner.get_manager_groups()
-        manage_by_group = self.context.aq_inner.get_manage_by_groups()
-        manage_all = self.context.aq_inner.get_manage_all()
+        user_management_list = context.get_management_dict()
+        manager_groups = context.get_manager_groups()
+        manage_by_group = context.get_manage_by_groups()
+        manage_all = context.get_manage_all()
 
         if sm.checkPermission(ManagePortal, portal) and not manage_by_group:
             # show all for adminstratior/manager
@@ -467,19 +475,18 @@ class UserEditView(BrowserView):
         self.user_fullname = user.getProperty('fullname', '')
         self.user_email = user.getProperty('email', '')
         approved_by = user.getProperty('approved_by', '')
-        self.user_approved_by = self.context.aq_inner.get_user_name(
+        self.user_approved_by = context.get_user_name(
             approved_by)
         self.user_approved_date = user.getProperty('approved_date', '')
         last_updated_by = user.getProperty('last_updated_by', '')
-        self.user_last_updated_by = self.context.aq_inner.get_user_name(
+        self.user_last_updated_by = context.get_user_name(
             last_updated_by)
         self.user_last_updated_date = user.getProperty('last_updated_date', '')
-        self.user_status = self.context.aq_inner.get_status(user)
+        self.user_status = context.get_status(user)
         # in edit page, login user allow to assign the user to the group that
         # they allow and its own groups as well.
-        # TODO(ivan) change to combo box.
         edit_user_groups = set(manage_by_group) | set(manager_groups)
-        group_names = context.get_groups_title(edit_user_groups)
+        group_names = self.context.get_groups_title(edit_user_groups)
         # find the current groups
         current_group_name = list(same_groups)[0]
         for group_name in group_names:
@@ -490,7 +497,7 @@ class UserEditView(BrowserView):
 
         # "Save" action
         if self.user_save:
-            self.context.aq_inner.update_member(
+            context.update_member(
                 self.request,
                 self.userid,
                 self.field_fullname,
