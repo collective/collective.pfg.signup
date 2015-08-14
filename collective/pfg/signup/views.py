@@ -292,7 +292,6 @@ class UserProfileView(BrowserView):
         self.user_last_updated_date = ""
         self.user_status = ""
         self.user_is_active = False
-        print "UserProfileView init"
 
     def __call__(self):
         """Call this browser view."""
@@ -306,10 +305,6 @@ class UserProfileView(BrowserView):
         self.user_edit = form.get("form.button.edit", None) is not None
         self.user_activate = form.get("form.button.activate", None) is not None
         self.user_deactivate = form.get("form.button.deactivate", None) is not None
-        print "UserProfileView call: %s" % self.userid
-        print "user_edit call: %s" % self.user_edit
-        print "user_activate call: %s" % self.user_activate
-        print "user_deactivate call: %s" % self.user_deactivate
 
         if not self.userid:
             return self.index()
@@ -351,8 +346,6 @@ class UserProfileView(BrowserView):
         if manage_all not in manage_by_group:
             # TODO((ivan) limit the search instead of doing it after that
             same_groups = set(manage_by_group) & set(user_groups)
-            print "user_groups %s" % user_groups
-            print "same_groups %s" % same_groups
             if not same_groups:
                 return self.index()
 
@@ -405,7 +398,6 @@ class UserEditView(BrowserView):
         self.user_last_updated_by = ""
         self.user_last_updated_date = ""
         self.user_status = ""
-        print "UserEditView init"
 
     def __call__(self):
         """Call this browser view."""
@@ -420,11 +412,6 @@ class UserEditView(BrowserView):
         self.field_user_group = form.get("user-group", "")
         self.user_save = form.get("form.button.save", None) is not None
         self.user_cancel = form.get("form.button.cancel", None) is not None
-        print "UserEditView call: %s" % self.userid
-        print "field_fullname call: %s" % self.field_fullname
-        print "field_user_group call: %s" % self.field_user_group
-        print "user_save call: %s" % self.user_save
-        print "user_cancel call: %s" % self.user_cancel
 
         if not self.userid:
             return self.index()
@@ -464,7 +451,6 @@ class UserEditView(BrowserView):
             return self.index()
 
         user_groups = user.getGroups()
-        print "current all user groups: %s" % user_groups
         same_groups = user_groups
         if manage_all not in manage_by_group:
             # TODO(ivan) limit the search instead of doing it after that

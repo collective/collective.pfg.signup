@@ -465,7 +465,6 @@ class SignUpAdapter(FormActionAdapter):
             return {FORM_ERROR_MARKER: err}
 
         if current_group != new_group:
-            print "update from %s to %s" % (current_group, new_user_group)
             try:
                 portal_groups.removePrincipalFromGroup(user_id, current_group)
             except(KeyError), err:
@@ -473,7 +472,6 @@ class SignUpAdapter(FormActionAdapter):
                 logging.exception(error_string)
                 self.plone_utils.addPortalMessage(error_string)
                 return
-
 
             try:
                 portal_groups.addPrincipalToGroup(user_id, new_group)
@@ -509,7 +507,6 @@ class SignUpAdapter(FormActionAdapter):
                 current_user_id = current_user.id
             current_time = datetime.now().strftime("%d %B %Y %I:%M %p")
             current_email = user.getProperty('email', '')
-            print "current email: %s " % current_email
 
             if not current_email:
                 # no email
@@ -523,7 +520,6 @@ class SignUpAdapter(FormActionAdapter):
                 return
 
             new_email = current_email[split+1:]
-            print "new email: %s " % new_email
             # update user_last_updated_date and user_last_updated_by
             user.setMemberProperties({
                 'email': new_email,
@@ -561,7 +557,6 @@ class SignUpAdapter(FormActionAdapter):
                 current_user_id = current_user.id
             current_time = datetime.now().strftime("%d %B %Y %I:%M %p")
             current_email = user.getProperty('email', '')
-            print "current email: %s " % current_email
 
             if not current_email:
                 # no email
@@ -572,7 +567,6 @@ class SignUpAdapter(FormActionAdapter):
 
             new_email = self.disabled_email + self.id_generator() + "_" + \
                 current_email
-            print "new email: %s " % new_email
             # update user_last_updated_date and user_last_updated_by
             user.setMemberProperties({
                 'email': new_email,
