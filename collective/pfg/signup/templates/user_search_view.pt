@@ -99,7 +99,7 @@
                                 </td>
 
                                 <td>
-                                  <span tal:replace="user/active_status">User Active</span>
+                                  <span tal:replace="user/user_status">User Active</span>
                                 </td>
                                 <td>
                                     <a href="user-edit-view"

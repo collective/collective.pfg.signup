@@ -921,6 +921,14 @@ class SignUpAdapter(FormActionAdapter):
             status = _("Inactive")
         return status
 
+    def is_active(self, user):
+        """Return whether the user is active."""
+        status = self.get_status(user)
+        if status == "Active":
+            return True
+
+        return False
+
     def get_user_name(self, user_id):
         """Return user name."""
         if not user_id:

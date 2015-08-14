@@ -238,7 +238,7 @@ class UserSearchView(UsersGroupsControlPanelView):
             user_info['can_set_email'] = user.canWriteProperty('email')
             user_info['can_set_password'] = canPasswordSet
             user_info['council_group'] = self.getGroups(user)
-            user_info['active_status'] = self.context.aq_inner.get_status(user)
+            user_info['user_status'] = self.context.aq_inner.get_status(user)
             results.append(user_info)
 
         # Sort the users by fullname
@@ -277,6 +277,7 @@ class UserProfileView(BrowserView):
         self.userid = self.request.get("userid", "")
         self.user_edit = self.request.get("form.button.edit", "")
         self.user_activate = self.request.get("form.button.activate", "")
+        self.user_deactivate = self.request.get("form.button.deactivate", "")
         self.user_fullname = ""
         self.user_group = ""
         self.user_email = ""
@@ -285,6 +286,7 @@ class UserProfileView(BrowserView):
         self.user_last_updated_by = ""
         self.user_last_updated_date = ""
         self.user_status = ""
+        self.user_is_active = False
         print "UserProfileView init"
 
     def __call__(self):
@@ -297,17 +299,19 @@ class UserProfileView(BrowserView):
         self.userid = self.request.get("userid", "")
         self.user_edit = self.request.get("form.button.edit", "")
         self.user_activate = self.request.get("form.button.activate", "")
+        self.user_deactivate = self.request.get("form.button.deactivate", "")
         print "UserProfileView call: %s" % self.userid
         print "user_edit call: %s" % self.user_edit
         print "user_activate call: %s" % self.user_activate
+        print "user_deactivate call: %s" % self.user_deactivate
+
+        if not self.userid:
+            return self.index()
 
         if self.user_edit == "Edit":
             edit_view = "%s/user_edit_view?userid=%s" % (
                 self.context.absolute_url(), self.userid)
             self.request.response.redirect(edit_view)
-
-        if not self.userid:
-            return self.index()
 
         portal_membership = getToolByName(context, 'portal_membership')
 
@@ -355,6 +359,7 @@ class UserProfileView(BrowserView):
             last_updated_by)
         self.user_last_updated_date = user.getProperty('last_updated_date', '')
         self.user_status = self.context.aq_inner.get_status(user)
+        self.user_is_active = self.context.aq_inner.is_active(user)
         # display the groups based from the login user management list
         group_names = context.get_groups_title(same_groups)
         self.user_group = ", ".join([group_name["group_title"] for group_name in group_names])
@@ -401,14 +406,14 @@ class UserEditView(BrowserView):
         print "user_save call: %s" % self.user_save
         print "user_cancel call: %s" % self.user_cancel
 
+        if not self.userid:
+            return self.index()
+
         # "Cancel" action
         if self.user_cancel:
             profile_view = "%s/user_profile_view?userid=%s" % (
                 self.context.absolute_url(), self.userid)
             self.request.response.redirect(profile_view)
-
-        if not self.userid:
-            return self.index()
 
         portal_membership = getToolByName(context, 'portal_membership')
 

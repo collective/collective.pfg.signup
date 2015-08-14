@@ -59,7 +59,12 @@
                         </tbody>
                     </table>
                     <input type="submit" value="Edit" name="form.button.edit" >
-                    <input type="submit" value="Activate" name="form.button.activate">
+                    <tal:block tal:condition="not:view/user_is_active" >
+                        <input type="submit" value="Activate" name="form.button.activate">
+                    </tal:block>
+                    <tal:block tal:condition="view/user_is_active" >
+                        <input type="submit" value="Deactivate" name="form.button.deactivate">
+                    </tal:block>
                 </form>
             </div>
         </metal:core>
