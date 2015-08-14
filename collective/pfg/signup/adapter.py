@@ -754,8 +754,11 @@ class SignUpAdapter(FormActionAdapter):
             if not name:
                 name = email
             messageText = self.get_approval_group_email_text(name)
-            self.send_email(messageText, mto=email, mfrom=portal_email,
-                            subject=subject)
+            try:
+                self.send_email(messageText, mto=email, mfrom=portal_email,
+                                subject=subject)
+            except SMTPServerDisconnected:
+                pass
         return
 
     def get_approval_group_email_text(self, name):
@@ -803,8 +806,11 @@ class SignUpAdapter(FormActionAdapter):
         messageText.append(portal_email_name)
         messageText = '\n'.join(messageText)
         subject = portal_title + ' account approved'
-        self.send_email(messageText, mto=data['email'], mfrom=portal_email,
-                        subject=subject)
+        try:
+            self.send_email(messageText, mto=data['email'], mfrom=portal_email,
+                            subject=subject)
+        except SMTPServerDisconnected:
+            pass
         return
 
     def send_reject_email(self, data):
@@ -823,8 +829,11 @@ class SignUpAdapter(FormActionAdapter):
         messageText.append(portal_email_name)
         messageText = '\n'.join(messageText)
         subject = portal_title + ' account request declined'
-        self.send_email(messageText, mto=data['email'], mfrom=portal_email,
-                        subject=subject)
+        try:
+            self.send_email(messageText, mto=data['email'], mfrom=portal_email,
+                            subject=subject)
+        except SMTPServerDisconnected:
+            pass
         return
 
     def send_email(self, messageText, mto, mfrom, subject):
