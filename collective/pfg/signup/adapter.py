@@ -26,6 +26,8 @@ from zope.component import getUtility
 from zope.interface import implements
 
 import logging
+import random
+import string
 import transaction
 
 SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
@@ -152,6 +154,7 @@ class SignUpAdapter(FormActionAdapter):
     schema = SignUpAdapterSchema
     security = ClassSecurityInfo()
     manage_all = "*"
+    disabled_email = "USERDISABLED"
 
     security.declarePrivate('onSuccess')
 
@@ -479,6 +482,107 @@ class SignUpAdapter(FormActionAdapter):
                 logging.exception(error_string)
                 self.plone_utils.addPortalMessage(error_string)
                 return
+
+        return
+
+    def user_activate(self, user_id):
+        """Deactivate user with user_id.
+
+        Remove USERDISABLED<randomkey>_user@email.com from email field.
+        """
+        if not user_id:
+            self.plone_utils.addPortalMessage(
+                _(u'This user ID is not valid.'))
+            return
+
+        portal_membership = getToolByName(self, 'portal_membership')
+        user = portal_membership.getMemberById(user_id)
+        if not user:
+            self.plone_utils.addPortalMessage(
+                _(u'This user does not exists.'))
+            return
+
+        try:
+            current_user_id = ""
+            if not portal_membership.isAnonymousUser():
+                current_user = portal_membership.getAuthenticatedMember()
+                current_user_id = current_user.id
+            current_time = datetime.now().strftime("%d %B %Y %I:%M %p")
+            current_email = user.getProperty('email', '')
+            print "current email: %s " % current_email
+
+            if not current_email:
+                # no email
+                return
+            if not current_email.startswith(self.disabled_email):
+                # already active
+                return
+            split = current_email.find("_")
+            if split < len(self.disabled_email):
+                # assume not valid email, should not be the case
+                return
+
+            new_email = current_email[split+1:]
+            print "new email: %s " % new_email
+            # update user_last_updated_date and user_last_updated_by
+            user.setMemberProperties({
+                'email': new_email,
+                'last_updated_by': current_user_id,
+                'last_updated_date': current_time})
+            self.plone_utils.addPortalMessage(
+                _(u'This user is activated.'))
+        except(AttributeError, ValueError), err:
+            logging.exception(err)
+            return {FORM_ERROR_MARKER: err}
+
+        return
+
+    def user_deactivate(self, user_id):
+        """Activate user with user_id.
+
+        Add USERDISABLED<randomkey>_user@email.com to email field.
+        """
+        if not user_id:
+            self.plone_utils.addPortalMessage(
+                _(u'This user ID is not valid.'))
+            return
+
+        portal_membership = getToolByName(self, 'portal_membership')
+        user = portal_membership.getMemberById(user_id)
+        if not user:
+            self.plone_utils.addPortalMessage(
+                _(u'This user does not exists.'))
+            return
+
+        try:
+            current_user_id = ""
+            if not portal_membership.isAnonymousUser():
+                current_user = portal_membership.getAuthenticatedMember()
+                current_user_id = current_user.id
+            current_time = datetime.now().strftime("%d %B %Y %I:%M %p")
+            current_email = user.getProperty('email', '')
+            print "current email: %s " % current_email
+
+            if not current_email:
+                # no email
+                return
+            if current_email.startswith(self.disabled_email):
+                # already deactivate
+                return
+
+            new_email = self.disabled_email + self.id_generator() + "_" + \
+                current_email
+            print "new email: %s " % new_email
+            # update user_last_updated_date and user_last_updated_by
+            user.setMemberProperties({
+                'email': new_email,
+                'last_updated_by': current_user_id,
+                'last_updated_date': current_time})
+            self.plone_utils.addPortalMessage(
+                _(u'This user is deactivated.'))
+        except(AttributeError, ValueError), err:
+            logging.exception(err)
+            return {FORM_ERROR_MARKER: err}
 
         return
 
@@ -915,9 +1019,9 @@ class SignUpAdapter(FormActionAdapter):
         if not user:
             return ""
 
-        user_group_ids = user.getGroups()
+        current_email = user.getProperty('email', '')
         status = _("Active")
-        if len(user_group_ids) == 1 and 'AuthenticatedUsers' in user_group_ids:
+        if current_email.startswith(self.disabled_email):
             status = _("Inactive")
         return status
 
@@ -969,6 +1073,11 @@ class SignUpAdapter(FormActionAdapter):
                 group_names.append(
                     {"group_id": user_group_id, "group_title": group_name})
         return group_names
+
+    def id_generator(self, size=8, chars=string.ascii_uppercase + string.digits):
+        """Random id generator."""
+        return ''.join(
+            random.SystemRandom().choice(chars) for _ in range(size))
 
 
 registerATCT(SignUpAdapter, PROJECTNAME)

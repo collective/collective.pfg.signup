@@ -364,6 +364,20 @@ class UserProfileView(BrowserView):
         group_names = context.get_groups_title(same_groups)
         self.user_group = ", ".join([group_name["group_title"] for group_name in group_names])
 
+        if self.user_activate:
+            self.context.aq_inner.user_activate(self.userid)
+
+            profile_view = "%s/user_profile_view?userid=%s" % (
+                self.context.absolute_url(), self.userid)
+            self.request.response.redirect(profile_view)
+
+        if self.user_deactivate:
+            self.context.aq_inner.user_deactivate(self.userid)
+
+            profile_view = "%s/user_profile_view?userid=%s" % (
+                self.context.absolute_url(), self.userid)
+            self.request.response.redirect(profile_view)
+
         return self.index()
 
 class UserEditView(BrowserView):
