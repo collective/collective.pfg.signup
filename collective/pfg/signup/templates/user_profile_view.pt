@@ -7,7 +7,11 @@
       i18n:domain="collective.pfg.signup">
 
     <body>
-
+        <metal:title fill-slot="content-title">
+            <h1 id="parent-fieldname-title" class="documentFirstHeading kssattr-atfieldname-title kssattr-templateId-kss_generic_macros kssattr-macro-title-field-view">
+                User Details
+            </h1>
+        </metal:title>
         <metal:core fill-slot="content-core"
                     tal:define="search_view string:user_search_view;
                                 profile_view string:user_profile_view;
