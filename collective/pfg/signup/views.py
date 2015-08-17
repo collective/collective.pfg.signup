@@ -118,7 +118,6 @@ class UserSearchView(UsersGroupsControlPanelView):
         search = form.get('form.button.Search', None) is not None
         # findAll = form.get('form.button.FindAll', None) is not None
         self.user_groups = form.get('user-groups', '')
-        print "self.user_groups: %s" % self.user_groups
         # self.searchString = not findAll and form.get('searchstring', '') or ''
         self.searchString = form.get('searchstring', '')
         self.searchResults = []
@@ -207,8 +206,6 @@ class UserSearchView(UsersGroupsControlPanelView):
             **{field: searchString}) for field in [
                 'login', 'fullname', 'email']]), 'userid')
 
-        print "user_groups: %s %s" % (self.user_groups, type(self.user_groups))
-
         # Tack on some extra data, including whether each role is explicitly
         # assigned ('explicit'), inherited ('inherited'), or not assigned at
         # all (None).
@@ -232,8 +229,6 @@ class UserSearchView(UsersGroupsControlPanelView):
 
             if self.user_groups:
                 filter_groups = set(self.user_groups) & set(this_user_groups)
-                print "this_user_groups: %s" % this_user_groups
-                print "filter_groups: %s" % filter_groups
                 if not filter_groups:
                     continue
 
