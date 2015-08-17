@@ -59,10 +59,20 @@
                                   <span tal:omit-tag="" i18n:translate="label_user_group">User Group</span>:
                                   <select name="user-groups" id="user-groups" multiple="multiple">
                                       <tal:block repeat="group view/search_user_groups">
-                                          <option value="admin"
-                                                  tal:attributes="value group/group_id">
-                                              <span tal:replace="group/group_title">Admin</span>
-                                          </option>
+                                          <tal:block tal:define="is_current python:'current' in group and group['current']" >
+                                              <tal:block tal:condition="is_current" >
+                                                  <option value="admin" selected="selected"
+                                                          tal:attributes="value group/group_id">
+                                                      <span tal:replace="group/group_title">Admin</span>
+                                                  </option>
+                                              </tal:block>
+                                              <tal:block tal:condition="not:is_current" >
+                                                  <option value="admin"
+                                                          tal:attributes="value group/group_id">
+                                                      <span tal:replace="group/group_title">Admin</span>
+                                                  </option>
+                                              </tal:block>
+                                          </tal:block>
                                       </tal:block>
                                   </select>
 

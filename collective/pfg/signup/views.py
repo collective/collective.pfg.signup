@@ -130,7 +130,17 @@ class UserSearchView(UsersGroupsControlPanelView):
         # manager_groups = context.get_manager_groups()
         manage_by_group = context.get_manage_by_groups()
         # all_user_groups = set(manage_by_group) | set(manager_groups)
-        self.search_user_groups = context.get_groups_title(manage_by_group)
+        group_names = context.get_groups_title(manage_by_group)
+
+        if self.user_groups and type(self.user_groups) != list:
+            self.user_groups = [self.user_groups]
+
+        # find the current groups
+        for current_group_name in self.user_groups:
+            for group_name in group_names:
+                if group_name["group_id"] == current_group_name:
+                    group_name["current"] = True
+        self.search_user_groups = group_names
 
         # Only search for all ('') if the many_users flag is not set.
         if not self.many_users or bool(self.searchString):
@@ -196,8 +206,6 @@ class UserSearchView(UsersGroupsControlPanelView):
             **{field: searchString}) for field in [
                 'login', 'fullname', 'email']]), 'userid')
 
-        if self.user_groups and type(self.user_groups) != list:
-            self.user_groups = [self.user_groups]
         print "user_groups: %s %s" % (self.user_groups, type(self.user_groups))
 
         # Tack on some extra data, including whether each role is explicitly
