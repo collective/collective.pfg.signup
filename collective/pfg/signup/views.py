@@ -116,14 +116,15 @@ class UserSearchView(UsersGroupsControlPanelView):
         form = self.request.form
         # submitted = form.get('form.submitted', False)
         search = form.get('form.button.Search', None) is not None
-        findAll = form.get('form.button.FindAll', None) is not None
+        # findAll = form.get('form.button.FindAll', None) is not None
         self.user_groups = form.get('user-groups', '')
         print "self.user_groups: %s" % self.user_groups
-        self.searchString = not findAll and form.get('searchstring', '') or ''
+        # self.searchString = not findAll and form.get('searchstring', '') or ''
+        self.searchString = form.get('searchstring', '')
         self.searchResults = []
         self.newSearch = False
 
-        if search or findAll:
+        if search:  # search or findAll
             self.newSearch = True
 
         # Custom code: allow user to filter user groups.

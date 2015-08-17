@@ -37,8 +37,7 @@
                       name="users_search"
                       method="post"
                       tal:attributes="action string:$context_url/$search_view"
-                      tal:define="findAll python:'form.button.FindAll' in request.keys();
-                                  portal_users view/searchResults;
+                      tal:define="portal_users view/searchResults;
                                   batch python:Batch(portal_users, b_size, int(b_start), orphan=1);
                                   batchformkeys python:['searchstring','_authenticator'];
                                   many_users view/many_users">
@@ -83,13 +82,6 @@
                                          i18n:attributes="value label_search;"
                                          />
 
-                                  <input type="submit"
-                                         class="searchButton"
-                                         name="form.button.FindAll"
-                                         value="Show all"
-                                         i18n:attributes="value label_showall;"
-                                         tal:condition="not:many_users"
-                                         />
                               </th>
                           </tr>
                           <tal:block tal:condition="portal_users" >
