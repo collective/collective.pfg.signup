@@ -29,7 +29,7 @@
                             context_url context/absolute_url;
                             portal_roles view/portal_roles;
                             portal_url context/portal_url;">
-            <a href="" tal:attributes="href string:$portal_url/pooldb/pgWelcome">Return to main menu</a>
+            <a href="" tal:attributes="href string:javascript:history.back()">Return to main menu</a>
             <p>Please select name or council name.</p>
 
             <form action=""
