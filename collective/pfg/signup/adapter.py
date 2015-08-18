@@ -495,6 +495,7 @@ class SignUpAdapter(FormActionAdapter):
                 _(u'This user ID is not valid.'))
             return
 
+        self.prepare_member_properties()
         portal_membership = getToolByName(self, 'portal_membership')
         user = portal_membership.getMemberById(user_id)
         if not user:
