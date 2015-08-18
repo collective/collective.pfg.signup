@@ -143,7 +143,7 @@ class UserSearchView(UsersGroupsControlPanelView):
         self.search_user_groups = group_names
 
         # Only search for all ('') if the many_users flag is not set.
-        if not self.many_users or bool(self.searchString):
+        if not self.many_users or bool(self.searchString) or self.user_groups:
             self.searchResults = self.doSearch(self.searchString)
 
         return self.index()
