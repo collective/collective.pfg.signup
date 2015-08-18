@@ -122,7 +122,7 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
     TALESString(
         'manage_group_template',
         required=False,
-        widget=atapi.StringWidget(
+        widget=atapi.TextAreaWidget(
             label=_(
                 u'label_manage_group_template',
                 default=u'Manage Group Template'),
@@ -130,11 +130,12 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
                 u'help_manage_group_template',
                 default=u"""A TALES expression return a dictionary where 'key'
                             value is which group the 'value' value should be
-                            manage by. '*' meaning all users. Leave empty to
-                            allow creation of user accounts without any
-                            management. eg python:{'Administrators': ['*']}.
+                            manage by. Leave empty to allow creation of user
+                            accounts without any management. eg
+                            python:{'Administrators': ['group_name']}.
                             This TALES expression is allowing all the users
-                            managed by 'Administrators' group."""),
+                            under 'group_name' group will be managed by
+                            'Administrators' group."""),
         ),
     ),
 
@@ -408,7 +409,7 @@ class SignUpAdapter(FormActionAdapter):
                                 'email': data['email'],
                                 'approved_by': current_user_id,
                                 'approved_date': current_time})
-            except(AttributeError, ValueError), err:
+            except (AttributeError, ValueError) as err:
                 logging.exception(err)
                 return {FORM_ERROR_MARKER: err}
 
@@ -420,7 +421,8 @@ class SignUpAdapter(FormActionAdapter):
         else:
             return {FORM_ERROR_MARKER: _("This user already exists.")}
 
-    def update_member(self, request, user_id, user_fullname, current_group, new_group):
+    def update_member(self, request, user_id, user_fullname, current_group,
+                      new_group):
         """Update member with full name and / or group."""
         # If we use custom member properties they must be initialized
         # before regtool is called
@@ -460,14 +462,14 @@ class SignUpAdapter(FormActionAdapter):
                 'fullname': user_fullname,
                 'last_updated_by': current_user_id,
                 'last_updated_date': current_time})
-        except(AttributeError, ValueError), err:
+        except (AttributeError, ValueError) as err:
             logging.exception(err)
             return {FORM_ERROR_MARKER: err}
 
         if current_group != new_group:
             try:
                 portal_groups.removePrincipalFromGroup(user_id, current_group)
-            except(KeyError), err:
+            except KeyError as err:
                 error_string = _(u'Can not remove group: %s.') % err
                 logging.exception(error_string)
                 self.plone_utils.addPortalMessage(error_string)
@@ -475,7 +477,7 @@ class SignUpAdapter(FormActionAdapter):
 
             try:
                 portal_groups.addPrincipalToGroup(user_id, new_group)
-            except(KeyError), err:
+            except KeyError as err:
                 error_string = _(u'Can not add group: %s.') % err
                 logging.exception(error_string)
                 self.plone_utils.addPortalMessage(error_string)
@@ -527,7 +529,7 @@ class SignUpAdapter(FormActionAdapter):
                 'last_updated_date': current_time})
             self.plone_utils.addPortalMessage(
                 _(u'This user is activated.'))
-        except(AttributeError, ValueError), err:
+        except (AttributeError, ValueError) as err:
             logging.exception(err)
             return {FORM_ERROR_MARKER: err}
 
@@ -574,7 +576,7 @@ class SignUpAdapter(FormActionAdapter):
                 'last_updated_date': current_time})
             self.plone_utils.addPortalMessage(
                 _(u'This user is deactivated.'))
-        except(AttributeError, ValueError), err:
+        except (AttributeError, ValueError) as err:
             logging.exception(err)
             return {FORM_ERROR_MARKER: err}
 
@@ -1071,7 +1073,8 @@ class SignUpAdapter(FormActionAdapter):
                     {"group_id": user_group_id, "group_title": group_name})
         return group_names
 
-    def id_generator(self, size=8, chars=string.ascii_uppercase + string.digits):
+    def id_generator(self, size=8,
+                     chars=string.ascii_uppercase + string.digits):
         """Random id generator."""
         return ''.join(
             random.SystemRandom().choice(chars) for _ in range(size))
