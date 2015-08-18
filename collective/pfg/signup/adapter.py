@@ -960,6 +960,9 @@ class SignUpAdapter(FormActionAdapter):
         expression_context = getExprContext(self, self.aq_parent)
         manage_group = self.getManage_group_template(
             expression_context=expression_context)
+        # make sure manage_group is dictionary
+        if not isinstance(manage_group, dict):
+            return {}
         return manage_group
 
     def get_manager_groups(self, manager=""):
