@@ -55,3 +55,14 @@ If you want to store or do other actions with the information entered into a sig
 additional PFG save action adapter. Instead of directly activating that on the form, in the signup adapter configure it
 as the "approved save action adapter" and this adapter will be activated only once the user has finally been approved.
 You can use this with a scriptable adapter for example to do scriptable actions on user approval.
+
+New Features
+------------
+
+Instead of default Plone Users and Groups settings page, browser view
+"@@user_search_view" is created for better control for manager to view and edit
+user profile pages, which are filtered by "Manage Group Template" field. Four
+new fields, "Access approved by", "Access approved date",
+"Access last updated by" and "Access last updated date" are added to have a
+record who and when during the update and approval. There are "activate" and
+"deactivate" buttons to disable user for accessing the site.
