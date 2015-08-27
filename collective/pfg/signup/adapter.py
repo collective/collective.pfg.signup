@@ -485,8 +485,8 @@ class SignUpAdapter(FormActionAdapter):
 
         return
 
-    def user_activate(self, user_id):
-        """Deactivate user with user_id.
+    def user_activate(self, user_id, request):
+        """Activate user with user_id.
 
         Remove USERDISABLED<randomkey>_user@email.com from email field.
         """
@@ -497,6 +497,7 @@ class SignUpAdapter(FormActionAdapter):
 
         self.prepare_member_properties()
         portal_membership = getToolByName(self, 'portal_membership')
+        portal_registration = getToolByName(self, 'portal_registration')
         user = portal_membership.getMemberById(user_id)
         if not user:
             self.plone_utils.addPortalMessage(
@@ -528,8 +529,10 @@ class SignUpAdapter(FormActionAdapter):
                 'email': new_email,
                 'last_updated_by': current_user_id,
                 'last_updated_date': current_time})
+            portal_registration.mailPassword(user.id, request)
             self.plone_utils.addPortalMessage(
-                _(u'This user is activated.'))
+                _(u"""This user is activated and
+                reset password email is sent to the user."""))
         except (AttributeError, ValueError) as err:
             logging.exception(err)
             return {FORM_ERROR_MARKER: err}
@@ -537,7 +540,7 @@ class SignUpAdapter(FormActionAdapter):
         return
 
     def user_deactivate(self, user_id):
-        """Activate user with user_id.
+        """Deactivate user with user_id.
 
         Add USERDISABLED<randomkey>_user@email.com to email field.
         """
@@ -576,6 +579,8 @@ class SignUpAdapter(FormActionAdapter):
                 'email': new_email,
                 'last_updated_by': current_user_id,
                 'last_updated_date': current_time})
+            passwd = self.id_generator(size=32)
+            user.setSecurityProfile(password=passwd)
             self.plone_utils.addPortalMessage(
                 _(u'This user is deactivated.'))
         except (AttributeError, ValueError) as err:

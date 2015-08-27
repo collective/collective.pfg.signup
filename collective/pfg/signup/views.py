@@ -382,7 +382,7 @@ class UserProfileView(BrowserView):
         self.user_group = ", ".join([group_name["group_title"] for group_name in group_names])
 
         if self.user_activate:
-            context.user_activate(self.userid)
+            context.user_activate(self.userid, self.request)
 
             profile_view = "%s/user_profile_view?userid=%s" % (
                 self.context.absolute_url(), self.userid)

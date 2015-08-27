@@ -18,7 +18,7 @@
                                 edit_view string:user_edit_view;
                                 context_url context/absolute_url;">
             <div id="dynamic">
-                <a href="" tal:attributes="href string:javascript:history.back()">Back to Search User</a>
+                <a href="" tal:attributes="href string:$context_url/$search_view">Back to Search User</a>
                 <form id="userprofiledetails"
                       method="post"
                       tal:attributes="action string:$context_url/$profile_view">
