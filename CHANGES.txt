@@ -1,7 +1,13 @@
 Changelog
 =========
 
-1.1 (unreleased)
+1.2 (2015-09-10)
+----------------
+
+* Remove unused JavaScript file.
+  [ivanteoh]
+
+1.1 (2015-08-27)
 ----------------
 
 * User management
