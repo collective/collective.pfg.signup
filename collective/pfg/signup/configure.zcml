@@ -49,11 +49,6 @@
         permission="zope2.View"
         />
 
-    <browser:resourceDirectory
-        name="collective.pfg.signup.javascript"
-        directory="javascript"
-        />
-
     <permission
         id="collective.pfg.signup.addSignUpAdapter"
         title="collective.pfg.signup: Add SignUpAdapter"
