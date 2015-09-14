@@ -6,13 +6,11 @@ collective.pfg.signup
 Introduction
 ============
 
-Create flexible user registration forms using PloneFormGen.
+Create flexible user registration, workflow and management in Plone.
 
-The problem it is trying to solve is
-
- - having customisable user registration forms
+ - customisable user registration forms (via PloneFormGen)
  - having registration forms just for certain areas of the site
- - user approval workflow
+ - user approval workflow based on groups (and user management)
  - collecting other information about users who signup
 
 A PloneFormGen save adapter that takes details form the submitted form and uses them to add a user to Plone.
