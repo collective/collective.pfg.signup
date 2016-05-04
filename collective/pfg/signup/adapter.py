@@ -721,6 +721,8 @@ class SignUpAdapter(FormActionAdapter):
                 new_approval_group = self.update_data_approval_group(
                     data_user_group)
                 user['approval_group'] = new_approval_group
+                # commit a subtransaction, to save the changes
+                transaction.get().commit()
                 messsage_string = _(u'"%(current)s" updated to "%(new)s"') % {
                     'current': current_approval_group,
                     'new': new_approval_group}
