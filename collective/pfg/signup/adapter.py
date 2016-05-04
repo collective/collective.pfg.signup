@@ -222,22 +222,11 @@ class SignUpAdapter(FormActionAdapter):
         expression_context = getExprContext(self, self.aq_parent)
         for key in data.keys():
             expression_context.setGlobal(key, REQUEST.form.get(key, None))
-        data['user_group'] = self.getUser_group_template(
+        data_user_group = self.getUser_group_template(
             expression_context=expression_context, **data)
-        # Split the manage_group_template into two:
-        # manage_group and approval_group
-        # manage_group_template can't use data argument any more
-        # because it will use when form data is not available
-        manage_group = self.getManage_group_template(
-            expression_context=expression_context)
-        is_manage_group_dict = isinstance(manage_group, dict)
-        data['approval_group'] = []
-        if manage_group and is_manage_group_dict:
-            for manager, user_list in manage_group.iteritems():
-                if '*' in user_list:
-                    data['approval_group'].append(manager)
-                elif data['user_group'] in user_list:
-                    data['approval_group'].append(manager)
+        data['user_group'] = data_user_group
+        data['approval_group'] = self.update_data_approval_group(
+            data_user_group)
 
         if data['email'] is None or not data['user_group']:
             # SignUpAdapter did not setup properly
@@ -293,6 +282,24 @@ class SignUpAdapter(FormActionAdapter):
 
         # If we get here, then something went wrong
         return {FORM_ERROR_MARKER: _(u'The form is currently unavailable')}
+
+    def update_data_approval_group(self, data_user_group):
+        # Split the manage_group_template into two:
+        # manage_group and approval_group
+        # manage_group_template can't use data argument any more
+        # because it will use when form data is not available
+        expression_context = getExprContext(self, self.aq_parent)
+        manage_group = self.getManage_group_template(
+            expression_context=expression_context)
+        is_manage_group_dict = isinstance(manage_group, dict)
+        data_approval_group = []
+        if manage_group and is_manage_group_dict:
+            for manager, user_list in manage_group.iteritems():
+                if '*' in user_list:
+                    data_approval_group.append(manager)
+                elif data_user_group in user_list:
+                    data_approval_group.append(manager)
+        return data_approval_group
 
     def check_userid(self, data):
         """Make sure the user does not already exist or on the waiting list."""
@@ -694,6 +701,53 @@ class SignUpAdapter(FormActionAdapter):
             user = self.waiting_list.pop(userid)
             self.send_reject_email(user)
             self.plone_utils.addPortalMessage(_(u'User has been rejected.'))
+        request.RESPONSE.redirect(self.absolute_url())
+
+    def update_approval_group(self):
+        """Fix wrong approval group based on the request."""
+        request = self.REQUEST
+        userid = request.form['userid']
+        sm = getSecurityManager()
+        portal = getUtility(ISiteRoot)
+        if userid:
+            user = self.waiting_list.get(userid)
+            if user is None:
+                self.plone_utils.addPortalMessage(
+                    _(u'This user has already been dealt with.'))
+            elif sm.checkPermission(ManagePortal, portal):
+                # Fix the wrong approval group
+                current_approval_group = user['approval_group']
+                data_user_group = user['user_group']
+                new_approval_group = self.update_data_approval_group(
+                    data_user_group)
+                user['approval_group'] = new_approval_group
+                messsage_string = _(u'"%(current)s" updated to "%(new)s"') % {
+                    'current': current_approval_group,
+                    'new': new_approval_group}
+                self.plone_utils.addPortalMessage(messsage_string)
+        request.RESPONSE.redirect(self.absolute_url())
+
+    def check_approval_group(self):
+        """Check current approval group based on the request."""
+        request = self.REQUEST
+        userid = request.form['userid']
+        sm = getSecurityManager()
+        portal = getUtility(ISiteRoot)
+        user = self.waiting_list.get(userid)
+        if userid:
+            user = self.waiting_list.get(userid)
+            if user is None:
+                self.plone_utils.addPortalMessage(
+                    _(u'This user has already been dealt with.'))
+            elif sm.checkPermission(ManagePortal, portal):
+                # show the current approval group
+                current_username = user['username']
+                current_approval_group = user['approval_group']
+                messsage_string = _(
+                    u'Approval group for "%(username)s" is "%(approval)s"') % {
+                    'username': current_username,
+                    'approval': current_approval_group}
+                self.plone_utils.addPortalMessage(messsage_string)
         request.RESPONSE.redirect(self.absolute_url())
 
     def user_not_permitted(self, group):
