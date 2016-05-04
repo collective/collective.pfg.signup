@@ -725,6 +725,9 @@ class SignUpAdapter(FormActionAdapter):
                     'current': current_approval_group,
                     'new': new_approval_group}
                 self.plone_utils.addPortalMessage(messsage_string)
+            else:
+                self.plone_utils.addPortalMessage(
+                    _(u'You do not have permission to manage this user.'))
         request.RESPONSE.redirect(self.absolute_url())
 
     def check_approval_group(self):
@@ -748,6 +751,9 @@ class SignUpAdapter(FormActionAdapter):
                     'username': current_username,
                     'approval': current_approval_group}
                 self.plone_utils.addPortalMessage(messsage_string)
+            else:
+                self.plone_utils.addPortalMessage(
+                    _(u'You do not have permission to manage this user.'))
         request.RESPONSE.redirect(self.absolute_url())
 
     def user_not_permitted(self, group):
