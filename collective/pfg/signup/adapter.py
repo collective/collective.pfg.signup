@@ -142,6 +142,17 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
 ))
 
 
+def asList(x):
+    """ If not list, return x in a single-element list.
+
+    .. note:: This will wrap falsy values like ``None`` or ``''`` in a list,
+              making them truthy.
+    """
+    if isinstance(x, (list, tuple)):
+        return x
+    return [x]
+
+
 class SignUpAdapter(FormActionAdapter):
 
     """A form action adapter that saves signup form."""
@@ -220,16 +231,15 @@ class SignUpAdapter(FormActionAdapter):
         manage_group = self.getManage_group_template(
             expression_context=expression_context)
         is_manage_group_dict = isinstance(manage_group, dict)
-        data['approval_group'] = ""
+        data['approval_group'] = []
         if manage_group and is_manage_group_dict:
             for manager, user_list in manage_group.iteritems():
                 if '*' in user_list:
-                    data['approval_group'] = manager
-                if data['user_group'] in user_list:
-                    data['approval_group'] = manager
-                    break
+                    data['approval_group'].append(manager)
+                elif data['user_group'] in user_list:
+                    data['approval_group'].append(manager)
 
-        if data['email'] is None or data['user_group'] == "":
+        if data['email'] is None or not data['user_group']:
             # SignUpAdapter did not setup properly
             return {
                 FORM_ERROR_MARKER: _(u'Sign Up form is not setup properly.')}
@@ -314,20 +324,30 @@ class SignUpAdapter(FormActionAdapter):
         self.send_waiting_approval_email(data)
 
         # need an email address for the approvers group
-        approval_group = portal_groups.getGroupById(data['approval_group'])
-        if approval_group is None:
-            self.send_approval_group_not_exist_email(data)
+        data_approval_group = data['approval_group']
+        if not data_approval_group:
+            self.send_approval_group_is_blank_email(data['username'])
             return
-        approval_email = approval_group.getProperty('email')
-        if not approval_email:
-            approval_group_members = approval_group.getGroupMembers()
-            if approval_group_members:
-                self.send_approval_group_members_email(
-                    data, approval_group_members)
+
+        approval_group_list = asList(data_approval_group)
+        for approval_group_id in approval_group_list:
+            approval_group = portal_groups.getGroupById(approval_group_id)
+
+            if not approval_group:
+                self.send_approval_group_not_exist_email(approval_group_id)
+                continue
+
+            approval_email = approval_group.getProperty('email')
+            if approval_email:
+                approval_title = approval_group.getProperty('title')
+                self.send_approval_group_email(approval_email, approval_title)
             else:
-                self.send_approval_group_problem_email(data)
-            return
-        self.send_approval_group_email(data)
+                approval_group_members = approval_group.getGroupMembers()
+                if approval_group_members:
+                    self.send_approval_group_members_email(
+                        approval_group_members)
+                else:
+                    self.send_approval_group_problem_email(approval_group_id)
 
     def emailRegister(self, request, data):
         """User type should be authenticated by email.
@@ -687,11 +707,22 @@ class SignUpAdapter(FormActionAdapter):
             raise Unauthorized('You need to login to access this page.')
         current_user = portal_membership.getAuthenticatedMember()
         current_user_groups = current_user.getGroups()
-        if group not in current_user_groups:
+
+        if not group:
             self.plone_utils.addPortalMessage(
                 _(u'You do not have permission to do this.'))
             self.REQUEST.RESPONSE.redirect(self.absolute_url())
             return True
+
+        group_list = asList(group)
+        for current_group in group_list:
+            if current_group in current_user_groups:
+                return False
+
+        self.plone_utils.addPortalMessage(
+            _(u'You do not have permission to do this.'))
+        self.REQUEST.RESPONSE.redirect(self.absolute_url())
+        return True
 
     def get_portal_email_properties(self):
         """Return the portal title for use in emails."""
@@ -701,7 +732,45 @@ class SignUpAdapter(FormActionAdapter):
             portal.Title(), portal.getProperty('email_from_address'),
             portal.getProperty('email_from_name'))
 
-    def send_approval_group_not_exist_email(self, data):
+    def send_approval_group_is_blank_email(self, username):
+        """This username does not have approval group."""
+        portal_title, portal_email, portal_email_name = \
+            self.get_portal_email_properties()
+        portal_url = getToolByName(self, 'portal_url')()
+        portal_groups = getToolByName(self, 'portal_groups')
+        administrators = portal_groups.getGroupById('Administrators')
+        administrators_email = administrators.getProperty('email')
+        if not administrators_email:
+            administrators_email = getUtility(ISiteRoot).getProperty(
+                'email_from_address', '')
+        portal_groups = getToolByName(self, 'portal_groups')
+        if not username:
+            username = ""
+        messageText = [
+            self.get_approval_group_email_text(username), ]
+        messageText.append('')
+        messageText.append(
+            '---------------------------------------------------')
+        messageText.append('')
+        messageText.append(
+            u"""This email has been sent to this address because the username
+            "%s" currently doesn\'t have approval group and needs to be
+            created.""" %
+            username)
+        messageText.append('')
+        messageText.append('Thank you,')
+        messageText.append('')
+        messageText.append(portal_email_name)
+        messageText = '\n'.join(messageText)
+        subject = portal_title + ' approval group problem'
+        try:
+            self.send_email(messageText, mto=administrators_email,
+                            mfrom=portal_email, subject=subject)
+        except SMTPServerDisconnected:
+            pass
+        return
+
+    def send_approval_group_not_exist_email(self, approval_group_id):
         """The approval group does not exist."""
         portal_title, portal_email, portal_email_name = \
             self.get_portal_email_properties()
@@ -713,18 +782,10 @@ class SignUpAdapter(FormActionAdapter):
             administrators_email = getUtility(ISiteRoot).getProperty(
                 'email_from_address', '')
         portal_groups = getToolByName(self, 'portal_groups')
-        approval_group = portal_groups.getGroupById(data['approval_group'])
-        if approval_group is None:
-            approval_group_title = data['approval_group']
-            # email_link = portal_url + '/@@usergroup-groupprefs'
-        else:
-            approval_group_title = approval_group.getProperty('title')
-            # email_link = portal_url + '/@@usergroup-groupdetails?groupname='
-            # + data['approval_group']
-            if not approval_group_title:
-                approval_group_title = data['approval_group']
+        if not approval_group_id:
+            approval_group_id = ""
         messageText = [
-            self.get_approval_group_email_text(approval_group_title), ]
+            self.get_approval_group_email_text(approval_group_id), ]
         messageText.append('')
         messageText.append(
             '---------------------------------------------------')
@@ -732,7 +793,7 @@ class SignUpAdapter(FormActionAdapter):
         messageText.append(
             u"""This email has been sent to this address because the group "%s"
             currently doesn\'t exist and needs to be created.""" %
-            approval_group_title)
+            approval_group_id)
         messageText.append('')
         messageText.append(
             u"""You can add the group using this link: %s""" %
@@ -750,7 +811,7 @@ class SignUpAdapter(FormActionAdapter):
             pass
         return
 
-    def send_approval_group_problem_email(self, data):
+    def send_approval_group_problem_email(self, approval_group_id):
         """There is a problem with the approval group so alert someone."""
         portal_title, portal_email, portal_email_name = \
             self.get_portal_email_properties()
@@ -762,18 +823,10 @@ class SignUpAdapter(FormActionAdapter):
             administrators_email = getUtility(ISiteRoot).getProperty(
                 'email_from_address', '')
         portal_groups = getToolByName(self, 'portal_groups')
-        approval_group = portal_groups.getGroupById(data['approval_group'])
-        if approval_group is None:
-            approval_group_title = data['approval_group']
-            # email_link = portal_url + '/@@usergroup-groupprefs'
-        else:
-            approval_group_title = approval_group.getProperty('title')
-            # email_link = portal_url + '/@@usergroup-groupdetails?groupname='
-            # + data['approval_group']
-            if not approval_group_title:
-                approval_group_title = data['approval_group']
+        if not approval_group_id:
+            approval_group_id = ""
         messageText = [
-            self.get_approval_group_email_text(approval_group_title), ]
+            self.get_approval_group_email_text(approval_group_id), ]
         messageText.append('')
         messageText.append(
             '---------------------------------------------------')
@@ -782,12 +835,12 @@ class SignUpAdapter(FormActionAdapter):
             u"""This email has been sent to this address because the group "%s"
                 currently doesn\'t have any members with contact information or
                 the group itself doesn\'t have contact information.""" %
-            approval_group_title)
+            approval_group_id)
         messageText.append('')
         messageText.append(
             u"""You can add members to the group using this link: %s""" %
             portal_url + '/@@usergroup-groupmembership?groupname=' +
-            data['approval_group'])
+            approval_group_id)
         messageText.append('')
         messageText.append('Thank you,')
         messageText.append('')
@@ -824,30 +877,26 @@ class SignUpAdapter(FormActionAdapter):
             pass
         return
 
-    def send_approval_group_email(self, data):
+    def send_approval_group_email(self, approval_email, approval_title):
         """Send an email to approval group.
 
         When there is a user waiting for approval.
         """
         portal_title, portal_email, portal_email_name = \
             self.get_portal_email_properties()
-        portal_groups = getToolByName(self, 'portal_groups')
         # already checked that the group exists and has an email address
-        approval_group = portal_groups.getGroupById(data['approval_group'])
-        approval_group_email = approval_group.getProperty('email')
-        approval_group_title = approval_group.getProperty('title')
-        if not approval_group_title:
-            approval_group_title = data['approval_group']
-        messageText = self.get_approval_group_email_text(approval_group_title)
+        if not approval_title:
+            approval_title = approval_email
+        messageText = self.get_approval_group_email_text(approval_title)
         subject = portal_title + ' user Waiting for approval'
         try:
-            self.send_email(messageText, mto=approval_group_email,
+            self.send_email(messageText, mto=approval_email,
                             mfrom=portal_email, subject=subject)
         except SMTPServerDisconnected:
             pass
         return
 
-    def send_approval_group_members_email(self, data, approval_group_members):
+    def send_approval_group_members_email(self, approval_group_members):
         """Send an email to each member of the approval group.
 
         When there is a user waiting for approval.

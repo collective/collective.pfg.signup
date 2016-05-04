@@ -14,6 +14,7 @@ from Products.Five.browser.pagetemplatefile import ViewPageTemplateFile
 from Products.Five import BrowserView
 from Products.PluggableAuthService.interfaces.plugins import IRolesPlugin
 
+from collective.pfg.signup.adapter import asList
 from itertools import chain
 from plone.app.controlpanel.usergroups import UsersGroupsControlPanelView
 from zope.component import getMultiAdapter
@@ -72,7 +73,17 @@ class UserApproverView(BrowserView):
             display_all = True
 
         for key, value in context.waiting_list.items():
-            if not display_all and value['approval_group'] not in user_groups:
+            approval_group = value['approval_group']
+            belong_to_approval_group = False
+            if approval_group:
+                # before fix, the approval_group_list could be '' or
+                # 'dlg_admin'. Now it should be ['dlg_admin']
+                approval_group_list = asList(approval_group)
+                for group_name in approval_group_list:
+                    if group_name in user_groups:
+                        belong_to_approval_group = True
+                        break
+            if not display_all and not belong_to_approval_group:
                 continue
             user_group = portal_groups.getGroupById(value['user_group'])
             if user_group is not None:
