@@ -129,7 +129,8 @@ class UserSearchView(UsersGroupsControlPanelView):
         search = form.get('form.button.Search', None) is not None
         # findAll = form.get('form.button.FindAll', None) is not None
         self.user_groups = form.get('user-groups', '')
-        # self.searchString = not findAll and form.get('searchstring', '') or ''
+        # self.searchString = not findAll and form.get('searchstring', '')
+        # or ''
         self.searchString = form.get('searchstring', '')
         self.searchResults = []
         self.newSearch = False
@@ -167,11 +168,11 @@ class UserSearchView(UsersGroupsControlPanelView):
         rolemakers = acl.plugins.listPlugins(IRolesPlugin)
 
         portal_membership = getToolByName(self, 'portal_membership')
-        current_user = portal_membership.getAuthenticatedMember()
+        # current_user = portal_membership.getAuthenticatedMember()
         sm = getSecurityManager()
         portal = getUtility(ISiteRoot)
 
-        user_management_list = context.get_management_dict()
+        # user_management_list = context.get_management_dict()
         manage_by_group = context.get_manage_by_groups()
         manage_all = context.get_manage_all()
 
@@ -298,7 +299,9 @@ class UserSearchView(UsersGroupsControlPanelView):
             user_groups = set(login_manage_by_groups) & set(user_group_ids)
 
         group_names = context.get_groups_title(user_groups)
-        return ", ".join([group_name["group_title"] for group_name in group_names])
+        return ", ".join(
+            [group_name["group_title"] for group_name in group_names])
+
 
 class UserProfileView(BrowserView):
 
@@ -331,7 +334,8 @@ class UserProfileView(BrowserView):
         self.userid = form.get("userid", "")
         self.user_edit = form.get("form.button.edit", None) is not None
         self.user_activate = form.get("form.button.activate", None) is not None
-        self.user_deactivate = form.get("form.button.deactivate", None) is not None
+        self.user_deactivate = form.get(
+            "form.button.deactivate", None) is not None
 
         if not self.userid:
             return self.index()
@@ -351,7 +355,7 @@ class UserProfileView(BrowserView):
         sm = getSecurityManager()
         portal = getUtility(ISiteRoot)
 
-        user_management_list = context.get_management_dict()
+        # user_management_list = context.get_management_dict()
         manage_by_group = context.get_manage_by_groups()
         manage_all = context.get_manage_all()
 
@@ -390,7 +394,8 @@ class UserProfileView(BrowserView):
         self.user_is_active = context.is_active(user)
         # display the groups based from the login user management list
         group_names = context.get_groups_title(same_groups)
-        self.user_group = ", ".join([group_name["group_title"] for group_name in group_names])
+        self.user_group = ", ".join(
+            [group_name["group_title"] for group_name in group_names])
 
         if self.user_activate:
             context.user_activate(self.userid, self.request)
@@ -407,6 +412,7 @@ class UserProfileView(BrowserView):
             self.request.response.redirect(profile_view)
 
         return self.index()
+
 
 class UserEditView(BrowserView):
 
@@ -459,7 +465,7 @@ class UserEditView(BrowserView):
         sm = getSecurityManager()
         portal = getUtility(ISiteRoot)
 
-        user_management_list = context.get_management_dict()
+        # user_management_list = context.get_management_dict()
         # manager_groups = context.get_manager_groups()
         manage_by_group = context.get_manage_by_groups()
         manage_all = context.get_manage_all()

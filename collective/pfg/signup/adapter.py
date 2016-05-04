@@ -143,7 +143,7 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
 
 
 def asList(x):
-    """ If not list, return x in a single-element list.
+    """If not list, return x in a single-element list.
 
     .. note:: This will wrap falsy values like ``None`` or ``''`` in a list,
               making them truthy.
@@ -373,7 +373,7 @@ class SignUpAdapter(FormActionAdapter):
         return result
 
     def prepare_member_properties(self):
-        """ Adjust site for custom member properties """
+        """Adjust site for custom member properties."""
 
         # Need to use ancient Z2 property sheet API here...
         portal_memberdata = getToolByName(self, "portal_memberdata")
@@ -448,7 +448,7 @@ class SignUpAdapter(FormActionAdapter):
         # before regtool is called
         self.prepare_member_properties()
         portal_membership = getToolByName(self, 'portal_membership')
-        portal_registration = getToolByName(self, 'portal_registration')
+        # portal_registration = getToolByName(self, 'portal_registration')
         portal_groups = getToolByName(self, 'portal_groups')
 
         if not user_id:
@@ -543,7 +543,7 @@ class SignUpAdapter(FormActionAdapter):
                 # assume not valid email, should not be the case
                 return
 
-            new_email = current_email[split+1:]
+            new_email = current_email[split + 1:]
             # update user_last_updated_date and user_last_updated_by
             user.setMemberProperties({
                 'email': new_email,
@@ -736,7 +736,7 @@ class SignUpAdapter(FormActionAdapter):
         """This username does not have approval group."""
         portal_title, portal_email, portal_email_name = \
             self.get_portal_email_properties()
-        portal_url = getToolByName(self, 'portal_url')()
+        # portal_url = getToolByName(self, 'portal_url')()
         portal_groups = getToolByName(self, 'portal_groups')
         administrators = portal_groups.getGroupById('Administrators')
         administrators_email = administrators.getProperty('email')
@@ -1029,11 +1029,11 @@ class SignUpAdapter(FormActionAdapter):
         If manager parameter is not provided, Current login user will used.
         """
         portal_membership = getToolByName(self, 'portal_membership')
-        portal_groups = getToolByName(self, 'portal_groups')
+        # portal_groups = getToolByName(self, 'portal_groups')
         acl = getToolByName(self, 'acl_users')
 
         if manager:
-            current_user = acl.getUserById(userId)
+            current_user = acl.getUserById(manager)
         elif portal_membership.isAnonymousUser():
             return []
         else:
