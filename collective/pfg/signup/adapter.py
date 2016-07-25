@@ -9,6 +9,8 @@ from Products.CMFCore.Expression import getExprContext
 from Products.CMFCore.interfaces import ISiteRoot
 from Products.CMFCore.permissions import ManagePortal
 from Products.CMFCore.utils import getToolByName
+from Products.CMFDefault.exceptions import EmailAddressInvalid
+from Products.CMFDefault.utils import checkEmailAddress
 from Products.PloneFormGen.config import FORM_ERROR_MARKER
 from Products.PloneFormGen.content.actionAdapter import FormActionAdapter
 from Products.PloneFormGen.content.actionAdapter import FormAdapterSchema
@@ -20,6 +22,7 @@ from collective.pfg.signup.config import PROJECTNAME
 from collective.pfg.signup.interfaces import ISignUpAdapter
 from datetime import datetime
 from email import message_from_string
+from plone import api
 from smtplib import SMTPRecipientsRefused
 from smtplib import SMTPServerDisconnected
 from zope.component import getUtility
@@ -27,6 +30,7 @@ from zope.interface import implements
 
 import logging
 import random
+import re
 import string
 import transaction
 
@@ -153,6 +157,10 @@ def asList(x):
     return [x]
 
 
+# max 63 chars per label in domains, see RFC1035
+PLONE5_EMAIL_RE = re.compile(r"^(\w&.%#$&'\*+-/=?^_`{}|~]+!)*[\w&.%#$&'\*+-/=?^_`{}|~]+@(([0-9a-z]([0-9a-z-]*[0-9a-z])?\.)+[a-z]{2,63}|([0-9]{1,3}\.){3}[0-9]{1,3})$", re.IGNORECASE)  # noqa
+
+
 class SignUpAdapter(FormActionAdapter):
 
     """A form action adapter that saves signup form."""
@@ -190,6 +198,22 @@ class SignUpAdapter(FormActionAdapter):
         if self.getPassword_field():
             return 'auto'
         return 'email'
+
+    def isValidEmail(self, email):
+        plone_version = api.env.plone_version()
+        portal_registration = getToolByName(self, 'portal_registration')
+
+        if plone_version < '5.0':
+            # Checks for valid email.
+            if PLONE5_EMAIL_RE.search(email) == None:
+                return 0
+            try:
+                checkEmailAddress(email)
+            except EmailAddressInvalid:
+                return 0
+            else:
+                return 1
+        return portal_registration.isValidEmail(email)
 
     def onSuccess(self, fields, REQUEST=None):  # noqa C901
         """Save form input."""
@@ -240,7 +264,8 @@ class SignUpAdapter(FormActionAdapter):
         data['username'] = data['username'].lower()
         data['email'] = data['email'].lower()
 
-        if not portal_registration.isValidEmail(data['email']):
+        # Use plone 5 portal_registration.isValidEmail
+        if not self.isValidEmail(data['email']):
             return {
                 FORM_ERROR_MARKER: _(u'You will need to signup again.'),
                 'email': _(u'This is not a valid email address')}
@@ -269,7 +294,7 @@ class SignUpAdapter(FormActionAdapter):
 
         email_from = getUtility(ISiteRoot).getProperty(
             'email_from_address', '')
-        if not portal_registration.isValidEmail(email_from):
+        if not self.isValidEmail(email_from):
             return {FORM_ERROR_MARKER: _(u'Portal email is not configured.')}
 
         if policy == 'email':
