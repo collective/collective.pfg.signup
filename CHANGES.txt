@@ -1,6 +1,12 @@
 Changelog
 =========
 
+1.4 (2016-07-25)
+----------------
+
+* Use Plone 5 valid email regular expression.
+  [ivanteoh]
+
 1.3 (2016-05-04)
 ----------------
 
