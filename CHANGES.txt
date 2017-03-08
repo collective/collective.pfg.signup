@@ -1,6 +1,12 @@
 Changelog
 =========
 
+1.5 (2017-03-08)
+----------------
+
+* Fix aaData contains unicode.
+  [ivanteoh]
+
 1.4 (2016-07-25)
 ----------------
 

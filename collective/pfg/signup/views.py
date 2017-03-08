@@ -23,6 +23,15 @@ from zope.component import getUtility
 logger = logging.getLogger('collective.pfg.signup')
 
 
+def to_str(unicode_or_str):
+    """Convert to string from unicode or str"""
+    if isinstance(unicode_or_str, unicode):
+        value = unicode_or_str.encode('utf-8')
+    else:
+        value = unicode_or_str
+    return value  # Instance of str
+
+
 class UserApproverView(BrowserView):
 
     """User approver browser view."""
@@ -98,12 +107,14 @@ class UserApproverView(BrowserView):
                 '/approve_user?userid=' + key + '">Approve</a>'
             reject_button = '<a class="btn" href="' + link + \
                 '/reject_user?userid=' + key + '">Reject</a>'
-            results.append([value['username'],
-                            value['fullname'],
-                            group_name,
-                            value['email'],
-                            approve_button,
-                            reject_button])
+            # make sure results only contain str as JS does not
+            # understand python unicode u''.
+            results.append([to_str(value['username']),
+                            to_str(value['fullname']),
+                            to_str(group_name),
+                            to_str(value['email']),
+                            to_str(approve_button),
+                            to_str(reject_button)])
         self.results = results
         return self.index()
 
