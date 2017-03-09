@@ -119,6 +119,9 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
                 default=u"""A TALES expression to calculate the group the user
                             should be added to. Fields in the form can be used
                             to populate this. eg string:${department}_${role}.
+                            Leave both this and 'Manage Group Template' empty
+                            to allow creation of user accounts without any
+                            management.
                             """),
             ),
         ),
@@ -134,9 +137,10 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
                 u'help_manage_group_template',
                 default=u"""A TALES expression return a dictionary where 'key'
                             value is which group the 'value' value should be
-                            manage by. Leave empty to allow creation of user
-                            accounts without any management. eg
-                            python:{'Administrators': ['group_name']}.
+                            manage by. Leave both this and
+                            'Add to User Group Template' empty to allow
+                            creation of user accounts without any management.
+                            eg python:{'Administrators': ['group_name']}.
                             This TALES expression is allowing all the users
                             under 'group_name' group will be managed by
                             'Administrators' group."""),
@@ -205,7 +209,7 @@ class SignUpAdapter(FormActionAdapter):
 
         if plone_version < '5.0':
             # Checks for valid email.
-            if PLONE5_EMAIL_RE.search(email) == None:
+            if PLONE5_EMAIL_RE.search(email) is None:
                 return 0
             try:
                 checkEmailAddress(email)
@@ -324,6 +328,11 @@ class SignUpAdapter(FormActionAdapter):
                     data_approval_group.append(manager)
                 elif data_user_group in user_list:
                     data_approval_group.append(manager)
+        if data_user_group and not data_approval_group:
+            # make sure always got someone to approve
+            # if data_user_group is not empty
+            # in case the TAL expression wasn't valid
+            data_approval_group.append('Administrators')
         return data_approval_group
 
     def check_userid(self, data):

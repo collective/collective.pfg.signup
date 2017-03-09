@@ -6,6 +6,8 @@ Changelog
 
 * Fix aaData contains unicode.
   [ivanteoh]
+* Default to 'Administrators' when the TAL expression miss out the approval group.
+  [ivanteoh]
 
 1.4 (2016-07-25)
 ----------------
