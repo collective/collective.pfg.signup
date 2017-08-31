@@ -123,8 +123,8 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
                             to allow creation of user accounts without any
                             management.
                             """),
-            ),
         ),
+    ),
 
     TALESString(
         'manage_group_template',
@@ -144,6 +144,37 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
                             This TALES expression is allowing all the users
                             under 'group_name' group will be managed by
                             'Administrators' group."""),
+        ),
+    ),
+
+    atapi.BooleanField(
+        'email_domain_verification',
+        default="The email domain is not valid. Please contact the site administrator.",
+        required=False,
+        widget=atapi.BooleanWidget(
+            label=_(
+                u'label_email_domain_verification',
+                default=u'Email Domain Verification'),
+            description=_(
+                u'help_email_domain_verification',
+                default=u"""Check this option to have addition 
+                verification for domain in email field need to match with 
+                the association group."""),
+        ),
+    ),
+
+    atapi.StringField(
+        'error_message_email_domain_verification',
+        default="The email domain is not valid. Please contact OLG.",
+        required=False,
+        widget=atapi.StringWidget(
+            label=_(u'label_error_message_email_domain_verification',
+                    default=u'Error Message When Email Domain Is Not Match'),
+            description=_(
+                u'help_email_domain_verification',
+                default=u"""Enter error message that will display to the user 
+                when domain of the email address is not match. It will use 
+                default message if this field is blank."""),
         ),
     ),
 
@@ -219,6 +250,32 @@ class SignUpAdapter(FormActionAdapter):
                 return 1
         return portal_registration.isValidEmail(email)
 
+    def is_match_email_domain(self, email, user_group):
+        portal_groups = getToolByName(self, 'portal_groups')
+
+        group = portal_groups.getGroupById(user_group)
+        if not group:
+            return 0
+
+        group_email = group.getProperty('email')
+        if not group_email:
+            return 0
+
+        user_domain = email.strip()
+        domain_index = user_domain.rfind('@')
+        if domain_index >= 0:
+            user_domain = user_domain[domain_index + 1:]
+
+        group_domain = group_email.strip()
+        domain_index = group_domain.rfind('@')
+        if domain_index >= 0:
+            group_domain = group_domain[domain_index + 1:]
+
+        if user_domain == group_domain:
+            return 1
+
+        return 0
+
     def onSuccess(self, fields, REQUEST=None):  # noqa C901
         """Save form input."""
         # get username and password
@@ -284,6 +341,22 @@ class SignUpAdapter(FormActionAdapter):
                 return {
                     FORM_ERROR_MARKER: _(u'You will need to signup again.'),
                     'email': error_text}
+
+        # Additional email check
+        import pdb; pdb.set_trace()
+        if self.getEmail_domain_verification():
+            email_error_text = _(u'This is not a valid email domain address')
+            email_error_message = _(
+                u"""The email domain is not valid. Please contact the site 
+                administrator.""")
+            custom_message = self.getError_message_email_domain_verification()
+            if custom_message:
+                email_error_message = custom_message
+            if not self.is_match_email_domain(
+                    data['email'], data['user_group']):
+                return {FORM_ERROR_MARKER: email_error_message,
+                        'email': email_error_text}
+
         check_id = self.check_userid(data)
         if check_id:
             return check_id
