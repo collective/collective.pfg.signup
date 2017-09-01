@@ -149,7 +149,7 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
 
     atapi.BooleanField(
         'email_domain_verification',
-        default="The email domain is not valid. Please contact the site administrator.",
+        default=False,
         required=False,
         widget=atapi.BooleanWidget(
             label=_(
@@ -165,7 +165,7 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
 
     atapi.StringField(
         'error_message_email_domain_verification',
-        default="The email domain is not valid. Please contact OLG.",
+        default="The email domain is not valid. Please contact the site administrator.",
         required=False,
         widget=atapi.StringWidget(
             label=_(u'label_error_message_email_domain_verification',
@@ -344,7 +344,7 @@ class SignUpAdapter(FormActionAdapter):
 
         # Additional email check
         if self.getEmail_domain_verification():
-            email_error_text = _(u'This is not a valid email domain address')
+            email_error_text = _(u'This email domain does not match.')
             email_error_message = _(
                 u"""The email domain is not valid. Please contact the site 
                 administrator.""")
