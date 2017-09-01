@@ -343,7 +343,6 @@ class SignUpAdapter(FormActionAdapter):
                     'email': error_text}
 
         # Additional email check
-        import pdb; pdb.set_trace()
         if self.getEmail_domain_verification():
             email_error_text = _(u'This is not a valid email domain address')
             email_error_message = _(
