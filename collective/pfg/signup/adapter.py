@@ -368,6 +368,8 @@ class SignUpAdapter(FormActionAdapter):
 
         email_from = getUtility(ISiteRoot).getProperty(
             'email_from_address', '')
+        if email_from:
+            email_from = email_from.strip()  # strip the extra spaces
         if not self.isValidEmail(email_from):
             return {FORM_ERROR_MARKER: _(u'Portal email is not configured.')}
 
@@ -909,6 +911,9 @@ class SignUpAdapter(FormActionAdapter):
         if not administrators_email:
             administrators_email = getUtility(ISiteRoot).getProperty(
                 'email_from_address', '')
+        if administrators_email:
+            # strip the extra spaces
+            administrators_email = administrators_email.strip()
         portal_groups = getToolByName(self, 'portal_groups')
         if not username:
             username = ""
@@ -947,6 +952,9 @@ class SignUpAdapter(FormActionAdapter):
         if not administrators_email:
             administrators_email = getUtility(ISiteRoot).getProperty(
                 'email_from_address', '')
+        if administrators_email:
+            # strip the extra spaces
+            administrators_email = administrators_email.strip()
         portal_groups = getToolByName(self, 'portal_groups')
         if not approval_group_id:
             approval_group_id = ""
@@ -988,6 +996,9 @@ class SignUpAdapter(FormActionAdapter):
         if not administrators_email:
             administrators_email = getUtility(ISiteRoot).getProperty(
                 'email_from_address', '')
+        if administrators_email:
+            # strip the extra spaces
+            administrators_email = administrators_email.strip()
         portal_groups = getToolByName(self, 'portal_groups')
         if not approval_group_id:
             approval_group_id = ""
