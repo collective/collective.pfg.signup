@@ -11,6 +11,7 @@ from Products.CMFCore.permissions import ManagePortal
 from Products.CMFCore.utils import getToolByName
 from Products.CMFDefault.exceptions import EmailAddressInvalid
 from Products.CMFDefault.utils import checkEmailAddress
+from Products.CMFPlone.interfaces import IMailSchema
 from Products.PloneFormGen.config import FORM_ERROR_MARKER
 from Products.PloneFormGen.content.actionAdapter import FormActionAdapter
 from Products.PloneFormGen.content.actionAdapter import FormAdapterSchema
@@ -23,6 +24,7 @@ from collective.pfg.signup.interfaces import ISignUpAdapter
 from datetime import datetime
 from email import message_from_string
 from plone import api
+from plone.registry.interfaces import IRegistry
 from smtplib import SMTPRecipientsRefused
 from smtplib import SMTPServerDisconnected
 from zope.component import getUtility
@@ -216,6 +218,11 @@ class SignUpAdapter(FormActionAdapter):
         """Initialize class."""
         FormActionAdapter.__init__(self, oid, **kwargs)
         self.waiting_list = OOBTree()
+        
+    @property
+    def mail_settings(self):
+        registry = getUtility(IRegistry)
+        return registry.forInterface(IMailSchema, prefix='plone')
 
     def getPolicy(self, data):
         """Get the policy for how the signup adapter should treat the user.
@@ -366,8 +373,8 @@ class SignUpAdapter(FormActionAdapter):
             # an error message
             return result
 
-        email_from = getUtility(ISiteRoot).getProperty(
-            'email_from_address', '')
+        email_from = self.mail_settings.email_from_address
+
         if email_from:
             email_from = email_from.strip()  # strip the extra spaces
         if not self.isValidEmail(email_from):
@@ -897,8 +904,8 @@ class SignUpAdapter(FormActionAdapter):
         portal_url = getToolByName(self, 'portal_url')
         portal = portal_url.getPortalObject()
         return (
-            portal.Title(), portal.getProperty('email_from_address'),
-            portal.getProperty('email_from_name'))
+            portal.Title(), self.mail_settings.email_from_address,
+            self.mail_settings.email_from_name)
 
     def send_approval_group_is_blank_email(self, username):
         """This username does not have approval group."""
