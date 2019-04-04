@@ -16,9 +16,20 @@ from Products.PluggableAuthService.interfaces.plugins import IRolesPlugin
 
 from collective.pfg.signup.adapter import asList
 from itertools import chain
-from plone.app.controlpanel.usergroups import UsersGroupsControlPanelView
 from zope.component import getMultiAdapter
 from zope.component import getUtility
+
+
+try:
+    # Plone 5.0.8 and above
+    # The users/groups control panel was moved to Products.CMFPlone in
+    # plone.app.controlpanel.usergroups version 3.
+    from Products.CMFPlone.controlpanel.browser.usergroups import \
+        UsersGroupsControlPanelView
+except ImportError:
+    # Before Plone 5.0.8
+    from plone.app.controlpanel.usergroups import UsersGroupsControlPanelView
+
 
 logger = logging.getLogger('collective.pfg.signup')
 

@@ -4,6 +4,8 @@ Changelog
 1.6 (Unreleased)
 ----------------
 
+* Fix deprecation errors related to plone.app.controlpanel and Products.CMFPlone.
+  [b4oshany]
 * Add email domain verification option.
   [ivanteoh]
 
