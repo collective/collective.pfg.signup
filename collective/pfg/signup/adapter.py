@@ -110,20 +110,17 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
 
     TALESString(
         'user_group_template',
-        default="python:{'Administrators': ['*']}",
-        required=True,
+        default="",
+        required=False,
         widget=atapi.StringWidget(
             label=_(
                 u'label_user_group_template',
-                default=u'Add to User Group Template'),
+                default=u'Add to Groups'),
             description=_(
                 u'help_add_to_user_group_template',
-                default=u"""A TALES expression to calculate the group the user
-                            should be added to. Fields in the form can be used
-                            to populate this. eg string:${department}_${role}.
-                            Leave both this and 'Manage Group Template' empty
-                            to allow creation of user accounts without any
-                            management.
+                default=u"""A TAL expression to calculate the group the user
+                            should be added to. Data from the form can be used
+                            eg string:${department}_${role}.
                             """),
         ),
     ),
@@ -131,21 +128,17 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
     TALESString(
         'manage_group_template',
         required=False,
+        default="",
         widget=atapi.TextAreaWidget(
             label=_(
                 u'label_manage_group_template',
-                default=u'Manage Group Template'),
+                default=u'Approval Group'),
             description=_(
                 u'help_manage_group_template',
-                default=u"""A TALES expression return a dictionary where 'key'
-                            value is which group the 'value' value should be
-                            manage by. Leave both this and
-                            'Add to User Group Template' empty to allow
-                            creation of user accounts without any management.
-                            eg python:{'Administrators': ['group_name']}.
-                            This TALES expression is allowing all the users
-                            under 'group_name' group will be managed by
-                            'Administrators' group."""),
+                default=u"""TAL to say what is the approver group to add to a given group name.
+                            e.g. python:{'Administrators': ['Editors']}. Administrators
+                            will be emailed to approve add to the Editors group.
+                            If there is no match then no approval step is enforced."""),
         ),
     ),
 
@@ -159,9 +152,7 @@ SignUpAdapterSchema = FormAdapterSchema.copy() + atapi.Schema((
                 default=u'Email Domain Verification'),
             description=_(
                 u'help_email_domain_verification',
-                default=u"""Check this option to have addition 
-                verification for domain in email field need to match with 
-                the association group."""),
+                default=u"""The users email address must match groups email address (domain part only)"""),
         ),
     ),
 
@@ -305,7 +296,7 @@ class SignUpAdapter(FormActionAdapter):
                 data[field_name] = val
         if 'email' not in data:
             return {
-                FORM_ERROR_MARKER: _(u'Sign Up form is not setup properly.')}
+                FORM_ERROR_MARKER: _(u'Required email field not found')}
         if 'username' not in data:
             data['username'] = data['email']
         # TalesField needs variables to be available from the context, so
@@ -319,7 +310,7 @@ class SignUpAdapter(FormActionAdapter):
         data['approval_group'] = self.update_data_approval_group(
             data_user_group)
 
-        if data['email'] is None or not data['user_group']:
+        if data['email'] is None:
             # SignUpAdapter did not setup properly
             return {
                 FORM_ERROR_MARKER: _(u'Sign Up form is not setup properly.')}
@@ -377,7 +368,8 @@ class SignUpAdapter(FormActionAdapter):
 
         if email_from:
             email_from = email_from.strip()  # strip the extra spaces
-        if not self.isValidEmail(email_from):
+        if not email_from or not self.isValidEmail(email_from):
+            #TODO: this check should move to the config form
             return {FORM_ERROR_MARKER: _(u'Portal email is not configured.')}
 
         if policy == 'email':
@@ -553,7 +545,8 @@ class SignUpAdapter(FormActionAdapter):
                 logging.exception(err)
                 return {FORM_ERROR_MARKER: err}
 
-            portal_groups.addPrincipalToGroup(member.getUserName(), user_group)
+            if user_group:
+                portal_groups.addPrincipalToGroup(member.getUserName(), user_group)
             if reset_password:
                 # send out reset password email
                 portal_registration.mailPassword(username, request)

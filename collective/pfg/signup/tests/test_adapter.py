@@ -11,6 +11,8 @@ class TestSignUpAdapter(unittest.TestCase):
 
     layer = INTEGRATION_TESTING
 
+
+
     def test_correctly_installed(self):
         """Test on sign up adapter is correctly installed."""
         portal = self.layer['portal']
@@ -24,3 +26,7 @@ class TestSignUpAdapter(unittest.TestCase):
         form = portal[portal.invokeFactory('FormFolder', 'form')]
         signup_adapter = form[form.invokeFactory('SignUpAdapter', 'signup')]
         self.assertEqual(signup_adapter.portal_type, 'SignUpAdapter')
+
+
+    def test_createuser(self):
+        pass

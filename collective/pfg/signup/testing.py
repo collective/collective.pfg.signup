@@ -4,6 +4,8 @@ from plone.app.testing import IntegrationTesting
 from plone.app.testing import PLONE_FIXTURE
 from plone.app.testing import PloneSandboxLayer
 from plone.testing import z2
+from plone.app.testing import setRoles
+from plone.app.testing import TEST_USER_ID
 
 
 class Layer(PloneSandboxLayer):
@@ -28,6 +30,14 @@ class Layer(PloneSandboxLayer):
         portal.portal_workflow.setDefaultChain("simple_publication_workflow")
 
         self.applyProfile(portal, 'collective.pfg.signup:default')
+
+
+        portal = self.layer['portal']
+        setRoles(portal, TEST_USER_ID, ['Contributor'])
+        form = portal[portal.invokeFactory('FormFolder', 'form')]
+        signup_adapter = form[form.invokeFactory('SignUpAdapter', 'signup')]
+        self.assertEqual(signup_adapter.portal_type, 'SignUpAdapter')
+
 
     def tearDownZope(self, app):
         """Tear down zope."""
