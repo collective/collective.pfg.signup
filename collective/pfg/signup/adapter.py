@@ -9,8 +9,6 @@ from Products.CMFCore.Expression import getExprContext
 from Products.CMFCore.interfaces import ISiteRoot
 from Products.CMFCore.permissions import ManagePortal
 from Products.CMFCore.utils import getToolByName
-from Products.CMFDefault.exceptions import EmailAddressInvalid
-from Products.CMFDefault.utils import checkEmailAddress
 from Products.CMFPlone.interfaces import IMailSchema
 from Products.PloneFormGen.config import FORM_ERROR_MARKER
 from Products.PloneFormGen.content.actionAdapter import FormActionAdapter
@@ -231,20 +229,34 @@ class SignUpAdapter(FormActionAdapter):
             return 'auto'
         return 'email'
 
+    def checkEmailAddress(value):
+        portal = getUtility(ISiteRoot)
+
+        reg_tool = getToolByName(portal, 'portal_registration')
+        if value and reg_tool.isValidEmail(value):
+            pass
+        else:
+            # TODO: check if there is a z3c validator
+            raise EmailAddressInvalid
+        return True
+
     def isValidEmail(self, email):
         plone_version = api.env.plone_version()
         portal_registration = getToolByName(self, 'portal_registration')
 
         if plone_version < '5.0':
             # Checks for valid email.
+            from Products.CMFDefault.exceptions import EmailAddressInvalid
+            from Products.CMFDefault.utils import checkEmailAddress
+
             if PLONE5_EMAIL_RE.search(email) is None:
-                return 0
+                return False
             try:
-                checkEmailAddress(email)
+                portal_registration.isValidEmail(email)
             except EmailAddressInvalid:
-                return 0
+                return False
             else:
-                return 1
+                return True
         return portal_registration.isValidEmail(email)
 
     def is_match_email_domain(self, email, user_group):
