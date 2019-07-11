@@ -365,13 +365,11 @@ class SignUpAdapter(FormActionAdapter):
             return result
 
         email_from = self.mail_settings.email_from_address
-
         if email_from:
             email_from = email_from.strip()  # strip the extra spaces
         if not email_from or not self.isValidEmail(email_from):
             #TODO: this check should move to the config form
             return {FORM_ERROR_MARKER: _(u'Portal email is not configured.')}
-
         if policy == 'email':
             result = self.emailRegister(REQUEST, data)
             return result
@@ -399,11 +397,6 @@ class SignUpAdapter(FormActionAdapter):
                     data_approval_group.append(manager)
                 elif data_user_group in user_list:
                     data_approval_group.append(manager)
-        if data_user_group and not data_approval_group:
-            # make sure always got someone to approve
-            # if data_user_group is not empty
-            # in case the TAL expression wasn't valid
-            data_approval_group.append('Administrators')
         return data_approval_group
 
     def check_userid(self, data):

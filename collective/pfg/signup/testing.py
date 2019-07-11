@@ -6,7 +6,13 @@ from plone.app.testing import PloneSandboxLayer
 from plone.testing import z2
 from plone.app.testing import setRoles
 from plone.app.testing import TEST_USER_ID
-
+from zope.component import getUtility
+from plone.registry.interfaces import IRegistry
+from Products.CMFCore.utils import getToolByName
+from Products.CMFPlone.interfaces import IMailSchema
+from plone import api
+from plone.app.robotframework.testing import REMOTE_LIBRARY_BUNDLE_FIXTURE
+from plone.testing.z2 import ZSERVER_FIXTURE
 
 class Layer(PloneSandboxLayer):
 
@@ -30,14 +36,29 @@ class Layer(PloneSandboxLayer):
         portal.portal_workflow.setDefaultChain("simple_publication_workflow")
 
         self.applyProfile(portal, 'collective.pfg.signup:default')
-
-
-        portal = self.layer['portal']
         setRoles(portal, TEST_USER_ID, ['Contributor'])
         form = portal[portal.invokeFactory('FormFolder', 'form')]
         signup_adapter = form[form.invokeFactory('SignUpAdapter', 'signup')]
-        self.assertEqual(signup_adapter.portal_type, 'SignUpAdapter')
-
+        form.invokeFactory('FormStringField', 'fullname')
+        form.invokeFactory('FormStringField', 'username')
+        form.invokeFactory('FormStringField', 'email')
+        form.invokeFactory('FormStringField', 'department')
+        form.mailer.setRecipient_name('Mail Dummy')
+        form.mailer.setRecipient_email('mdummy@address.com')
+        form.signup.full_name_field = 'fullname'
+        form.signup.username_field = 'username'
+        form.signup.email_field = 'email'
+        registry = getUtility(IRegistry)
+        mail_settings =  registry.forInterface(IMailSchema, prefix='plone')
+        mail_settings.email_from_address = 'localhost@plone.org'
+        mail_settings.email_from_name = u'Plone'
+        group = api.group.create(groupname='staff')
+        group.setProperties(email ='staff@plone.org')
+        admin_group = api.group.create(groupname='Administrators')
+        admin_group.setProperties(email ='admin@plone.org')
+        portal_membership = getToolByName(portal, 'portal_membership')
+        current_user = portal_membership.getAuthenticatedMember()
+        api.group.add_user(groupname='Administrators', username=current_user.id)
 
     def tearDownZope(self, app):
         """Tear down zope."""
@@ -52,3 +73,7 @@ INTEGRATION_TESTING = IntegrationTesting(
 FUNCTIONAL_TESTING = FunctionalTesting(
     bases=(FIXTURE,),
     name='collective.pfg.signup:Functional')
+ACCEPTANCE_TESTING = FunctionalTesting(
+    bases=(FIXTURE, REMOTE_LIBRARY_BUNDLE_FIXTURE, ZSERVER_FIXTURE),
+    name="collective.easyform:Acceptance",
+)

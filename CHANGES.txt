@@ -4,6 +4,9 @@ Changelog
 1.6 (Unreleased)
 ----------------
 
+* Fix bug with user not auto-created when user approve group is not set
+  [nngu6036]
+
 * Fix deprecation errors related to plone.app.controlpanel and Products.CMFPlone.
   [b4oshany]
 * Add email domain verification option.
