@@ -3,7 +3,10 @@ from collective.pfg.signup.testing import INTEGRATION_TESTING
 from plone.app.testing import setRoles
 from plone.app.testing import TEST_USER_ID
 from Products.CMFCore.Expression import Expression
-import unittest2 as unittest
+try:
+    import unittest2 as unittest
+except:
+    import unittest
 from plone import api
 
 class TestSignUpAdapter(unittest.TestCase):

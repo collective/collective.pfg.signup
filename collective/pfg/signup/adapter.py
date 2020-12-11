@@ -9,7 +9,14 @@ from Products.CMFCore.Expression import getExprContext
 from Products.CMFCore.interfaces import ISiteRoot
 from Products.CMFCore.permissions import ManagePortal
 from Products.CMFCore.utils import getToolByName
-from Products.CMFPlone.interfaces import IMailSchema
+try:
+    from Products.CMFPlone.RegistrationTool import EmailAddressInvalid
+except ImportError:
+    from Products.CMFDefault.exceptions import EmailAddressInvalid
+try:
+    from Products.CMFPlone.interfaces import IMailSchema
+except ImportError:
+    from plone.app.controlpanel.mail import IMailSchema
 from Products.PloneFormGen.config import FORM_ERROR_MARKER
 from Products.PloneFormGen.content.actionAdapter import FormActionAdapter
 from Products.PloneFormGen.content.actionAdapter import FormAdapterSchema
@@ -207,11 +214,13 @@ class SignUpAdapter(FormActionAdapter):
         """Initialize class."""
         FormActionAdapter.__init__(self, oid, **kwargs)
         self.waiting_list = OOBTree()
+        self.mail_settings = IMailSchema(getUtility(ISiteRoot))
         
-    @property
-    def mail_settings(self):
-        registry = getUtility(IRegistry)
-        return registry.forInterface(IMailSchema, prefix='plone')
+    # @property
+    # def mail_settings(self):
+    #     # registry = getUtility(IRegistry)
+    #     #return registry.forInterface(IMailSchema, prefix='plone')
+    #     return IMailSchema(self.context)
 
     def getPolicy(self, data):
         """Get the policy for how the signup adapter should treat the user.

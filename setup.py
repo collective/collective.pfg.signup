@@ -43,7 +43,9 @@ setup(name='collective.pfg.signup',
       ],
       extras_require={
         'test': ['plone.app.testing',
-                 'plone.app.robotframework'],
+                 'plone.app.robotframework',
+                 'plone.api',
+                 'Products.ATContentTypes'],
       },
       entry_points="""
       # -*- Entry points: -*-

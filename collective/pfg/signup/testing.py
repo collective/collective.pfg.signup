@@ -9,7 +9,10 @@ from plone.app.testing import TEST_USER_ID
 from zope.component import getUtility
 from plone.registry.interfaces import IRegistry
 from Products.CMFCore.utils import getToolByName
-from Products.CMFPlone.interfaces import IMailSchema
+try:
+    from Products.CMFPlone.interfaces import IMailSchema
+except ImportError:
+    from plone.app.controlpanel.mail import IMailSchema
 from plone import api
 from plone.app.robotframework.testing import REMOTE_LIBRARY_BUNDLE_FIXTURE
 from plone.testing.z2 import ZSERVER_FIXTURE
@@ -35,6 +38,7 @@ class Layer(PloneSandboxLayer):
         # PLONE_FIXTURE has no default workflow chain set
         portal.portal_workflow.setDefaultChain("simple_publication_workflow")
 
+        self.applyProfile(portal, 'Products.PloneFormGen:default')
         self.applyProfile(portal, 'collective.pfg.signup:default')
         setRoles(portal, TEST_USER_ID, ['Contributor'])
         form = portal[portal.invokeFactory('FormFolder', 'form')]
@@ -48,8 +52,8 @@ class Layer(PloneSandboxLayer):
         form.signup.full_name_field = 'fullname'
         form.signup.username_field = 'username'
         form.signup.email_field = 'email'
-        registry = getUtility(IRegistry)
-        mail_settings =  registry.forInterface(IMailSchema, prefix='plone')
+        # registry = getUtility(IRegistry)
+        mail_settings =  IMailSchema(portal)
         mail_settings.email_from_address = 'localhost@plone.org'
         mail_settings.email_from_name = u'Plone'
         group = api.group.create(groupname='staff')
@@ -73,7 +77,7 @@ INTEGRATION_TESTING = IntegrationTesting(
 FUNCTIONAL_TESTING = FunctionalTesting(
     bases=(FIXTURE,),
     name='collective.pfg.signup:Functional')
-ACCEPTANCE_TESTING = FunctionalTesting(
-    bases=(FIXTURE, REMOTE_LIBRARY_BUNDLE_FIXTURE, ZSERVER_FIXTURE),
-    name="collective.easyform:Acceptance",
-)
+# ACCEPTANCE_TESTING = FunctionalTesting(
+#     bases=(FIXTURE, REMOTE_LIBRARY_BUNDLE_FIXTURE, ZSERVER_FIXTURE),
+#     name="collective.easyform:Acceptance",
+# )
