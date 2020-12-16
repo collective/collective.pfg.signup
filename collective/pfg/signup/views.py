@@ -335,6 +335,7 @@ class UserProfileView(BrowserView):
         self.context = context
         self.request = request
         self.userid = self.request.get("userid", "")
+        self.loginid = self.request.get("loginid", "")
         self.user_fullname = ""
         self.user_group = ""
         self.user_email = ""
@@ -354,6 +355,7 @@ class UserProfileView(BrowserView):
         context = self.context.aq_inner
         form = self.request.form
         self.userid = form.get("userid", "")
+        self.loginid = form.get("loginid", "")
         self.user_edit = form.get("form.button.edit", None) is not None
         self.user_activate = form.get("form.button.activate", None) is not None
         self.user_deactivate = form.get(
@@ -463,6 +465,7 @@ class UserEditView(BrowserView):
         context = self.context.aq_inner
         form = self.request.form
         self.userid = form.get("userid", "")
+        self.loginid = form.get("loginid", "")
         self.field_fullname = form.get("fullname", "")
         self.field_user_group = form.get("user-group", "")
         self.user_save = form.get("form.button.save", None) is not None

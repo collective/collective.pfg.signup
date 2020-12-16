@@ -11,6 +11,8 @@ Changelog
   [b4oshany]
 * Add email domain verification option.
   [ivanteoh]
+* Display Login ID rather than User ID on search, profile view and profile edit view.
+  [JeffersonBledsoe]
 * Fix users not being able to be deactivated if their login id is different to their user id.
   [JeffersonBledsoe]
 

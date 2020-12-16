@@ -38,7 +38,7 @@
                             </tr>
                             <tr>
                                 <th>Username / email</th>
-                                <td><span class="TEXTFieldRead-TEXT" tal:replace="view/userid">fred@alburny.com</span></td>
+                                <td><span class="TEXTFieldRead-TEXT" tal:replace="view/loginid">fred@alburny.com</span></td>
                             </tr>
                             <tr>
                                 <th>Access approved by</th>

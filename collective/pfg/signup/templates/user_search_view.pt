@@ -96,13 +96,15 @@
                           <tal:block repeat="user batch">
                             <tr tal:define="oddrow repeat/user/odd;
                                             userid user/userid;
-                                            userquery python:view.makeQuery(userid=userid);"
+                                            loginid user/login;
+                                            userquery python:view.makeQuery(userid=userid);
+                                            userloginquery python:view.makeQuery(loginid=loginid);"
                                 tal:attributes="class python:oddrow and 'odd' or 'even'">
 
                                 <td>
                                     <a href="user-profile-view"
-                                       tal:attributes="href string:$context_url/$profile_view?${userquery}">
-                                        <span tal:replace="userid">username</span>
+                                       tal:attributes="href string:$context_url/$profile_view?${userquery}&${userloginquery}">
+                                        <span tal:replace="loginid">username</span>
                                     </a>
                                     <input type="hidden" name="users.id:records" tal:attributes="value userid" />
                                 </td>
@@ -120,7 +122,7 @@
                                 </td>
                                 <td>
                                     <a href="user-edit-view"
-                                       tal:attributes="href string:$context_url/$edit_view?${userquery}">
+                                       tal:attributes="href string:$context_url/$edit_view?${userquery}&${userloginquery}">
                                         <span>Edit</span>
                                     </a>
                                 </td>
