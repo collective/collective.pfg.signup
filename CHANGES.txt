@@ -6,6 +6,8 @@ Changelog
 
 * Add email domain verification option.
   [ivanteoh]
+* Fix users not being able to be deactivated if their login id is different to their user id.
+  [JeffersonBledsoe]
 
 1.5 (2017-03-08)
 ----------------
