@@ -18,6 +18,8 @@ from collective.pfg.signup.adapter import asList
 from itertools import chain
 from zope.component import getMultiAdapter
 from zope.component import getUtility
+from zope.publisher.interfaces.browser import IBrowserView
+from ZTUtils import make_query
 
 
 try:
@@ -130,7 +132,7 @@ class UserApproverView(BrowserView):
         return self.index()
 
 
-class UserSearchView(UsersGroupsControlPanelView):
+class UserSearchView(BrowserView):
 
     """User search browser view."""
 
@@ -142,6 +144,9 @@ class UserSearchView(UsersGroupsControlPanelView):
         # If you are unsure what this means always use context.aq_inner
         context = self.context.aq_inner
         portal_membership = getToolByName(context, 'portal_membership')
+        portal = getUtility(ISiteRoot)
+        path = "/".join(portal.getPhysicalPath())
+        self.usersview = self.context.unrestrictedTraverse(path+"/usergroup-userprefs")
 
         if portal_membership.isAnonymousUser():
             raise Unauthorized('You need to login to access this page.')
@@ -176,137 +181,152 @@ class UserSearchView(UsersGroupsControlPanelView):
                     group_name["current"] = True
         self.search_user_groups = group_names
 
+        self.many_users =  self.usersview.many_users
+#        self.user_groups = self.usersview.user_groups
+
         # Only search for all ('') if the many_users flag is not set.
-        if not self.many_users or bool(self.searchString) or self.user_groups:
-            self.searchResults = self.doSearch(self.searchString)
+        if not self.usersview.many_users or bool(self.searchString) or self.usersview.user_groups:
+            results = self.usersview.doSearch(self.searchString)
+            
+            acl = getToolByName(self, 'acl_users')
+            for user_info in results:
+                userId = user_info['id']
+                user = acl.getUserById(userId)
+                user_info['groups'] = self.getGroups(user)
+                user_info['user_status'] = context.get_status(user)
+                # filter out users who we don't manage
+                if  self.context.manage_all not in manage_by_group and not user_info['groups']:
+                    continue
+                self.searchResults.append(user_info)
 
         return self.index()
 
-    def doSearch(self, searchString):
-        """Search users."""
-        # TODO(ivan): not sure do we need these code below? should delete?
-        context = self.context.aq_inner
-        acl = getToolByName(self, 'acl_users')
-        rolemakers = acl.plugins.listPlugins(IRolesPlugin)
+    # TODO: work out why this code was copied and do it a different way
+    # def doSearch(self, searchString):
+    #     """Search users."""
+    #     # TODO(ivan): not sure do we need these code below? should delete?
+    #     context = self.context.aq_inner
+    #     acl = getToolByName(self, 'acl_users')
+    #     rolemakers = acl.plugins.listPlugins(IRolesPlugin)
 
-        portal_membership = getToolByName(self, 'portal_membership')
-        # current_user = portal_membership.getAuthenticatedMember()
-        sm = getSecurityManager()
-        portal = getUtility(ISiteRoot)
+    #     portal_membership = getToolByName(self, 'portal_membership')
+    #     # current_user = portal_membership.getAuthenticatedMember()
+    #     sm = getSecurityManager()
+    #     portal = getUtility(ISiteRoot)
 
-        # user_management_list = context.get_management_dict()
-        manage_by_group = context.get_manage_by_groups()
-        manage_all = context.get_manage_all()
+    #     # user_management_list = context.get_management_dict()
+    #     manage_by_group = context.get_manage_by_groups()
+    #     manage_all = context.get_manage_all()
 
-        if sm.checkPermission(ManagePortal, portal) and not manage_by_group:
-            # show all for adminstratior/manager
-            manage_by_group = [manage_all]
+    #     if sm.checkPermission(ManagePortal, portal) and not manage_by_group:
+    #         # show all for adminstratior/manager
+    #         manage_by_group = [manage_all]
 
-        if not manage_by_group:
-            # Reset the request variable, just in case.
-            self.request.set('__ignore_group_roles__', False)
-            return []
+    #     if not manage_by_group:
+    #         # Reset the request variable, just in case.
+    #         self.request.set('__ignore_group_roles__', False)
+    #         return []
 
-        searchView = getMultiAdapter(
-            (aq_inner(self.context), self.request), name='pas_search')
+    #     searchView = getMultiAdapter(
+    #         (aq_inner(self.context), self.request), name='pas_search')
 
-        # First, search for all inherited roles assigned to each group.
-        # We push this in the request so that IRoles plugins are told provide
-        # the roles inherited from the groups to which the principal belongs.
-        self.request.set('__ignore_group_roles__', False)
-        self.request.set('__ignore_direct_roles__', True)
-        inheritance_enabled_users = searchView.merge(chain(*[
-            searchView.searchUsers(**{field: searchString}) for field in [
-                'login', 'fullname', 'email']]), 'userid')
-        allInheritedRoles = {}
-        for user_info in inheritance_enabled_users:
-            userId = user_info['id']
-            user = acl.getUserById(userId)
-            # play safe, though this should never happen
-            if user is None:
-                logger.warn(
-                    'Skipped user without principal object: %s' % userId)
-                continue
-            allAssignedRoles = []
-            for rolemaker_id, rolemaker in rolemakers:
-                allAssignedRoles.extend(rolemaker.getRolesForPrincipal(user))
-            allInheritedRoles[userId] = allAssignedRoles
+    #     # First, search for all inherited roles assigned to each group.
+    #     # We push this in the request so that IRoles plugins are told provide
+    #     # the roles inherited from the groups to which the principal belongs.
+    #     self.request.set('__ignore_group_roles__', False)
+    #     self.request.set('__ignore_direct_roles__', True)
+    #     inheritance_enabled_users = searchView.merge(chain(*[
+    #         searchView.searchUsers(**{field: searchString}) for field in [
+    #             'login', 'fullname', 'email']]), 'userid')
+    #     allInheritedRoles = {}
+    #     for user_info in inheritance_enabled_users:
+    #         userId = user_info['id']
+    #         user = acl.getUserById(userId)
+    #         # play safe, though this should never happen
+    #         if user is None:
+    #             logger.warn(
+    #                 'Skipped user without principal object: %s' % userId)
+    #             continue
+    #         allAssignedRoles = []
+    #         for rolemaker_id, rolemaker in rolemakers:
+    #             allAssignedRoles.extend(rolemaker.getRolesForPrincipal(user))
+    #         allInheritedRoles[userId] = allAssignedRoles
 
-        # We push this in the request such IRoles plugins don't provide
-        # the roles from the groups the principal belongs.
-        self.request.set('__ignore_group_roles__', True)
-        self.request.set('__ignore_direct_roles__', False)
-        explicit_users = searchView.merge(chain(*[searchView.searchUsers(
-            **{field: searchString}) for field in [
-                'login', 'fullname', 'email']]), 'userid')
+    #     # We push this in the request such IRoles plugins don't provide
+    #     # the roles from the groups the principal belongs.
+    #     self.request.set('__ignore_group_roles__', True)
+    #     self.request.set('__ignore_direct_roles__', False)
+    #     explicit_users = searchView.merge(chain(*[searchView.searchUsers(
+    #         **{field: searchString}) for field in [
+    #             'login', 'fullname', 'email']]), 'userid')
 
-        # Tack on some extra data, including whether each role is explicitly
-        # assigned ('explicit'), inherited ('inherited'), or not assigned at
-        # all (None).
-        results = []
+    #     # Tack on some extra data, including whether each role is explicitly
+    #     # assigned ('explicit'), inherited ('inherited'), or not assigned at
+    #     # all (None).
+    #     results = []
 
-        for user_info in explicit_users:
-            userId = user_info['id']
-            user = portal_membership.getMemberById(userId)
-            # play safe, though this should never happen
-            if user is None:
-                logger.warn(
-                    'Skipped user without principal object: %s' % userId)
-                continue
+    #     for user_info in explicit_users:
+    #         userId = user_info['id']
+    #         user = portal_membership.getMemberById(userId)
+    #         # play safe, though this should never happen
+    #         if user is None:
+    #             logger.warn(
+    #                 'Skipped user without principal object: %s' % userId)
+    #             continue
 
-            this_user_groups = user.getGroups()
-            if manage_all not in manage_by_group:
-                # TODO((ivan) limit the search instead of doing it after that
-                same_groups = set(manage_by_group) & set(this_user_groups)
-                if not same_groups:
-                    continue
+    #         this_user_groups = user.getGroups()
+    #         if manage_all not in manage_by_group:
+    #             # TODO((ivan) limit the search instead of doing it after that
+    #             same_groups = set(manage_by_group) & set(this_user_groups)
+    #             if not same_groups:
+    #                 continue
 
-            if self.user_groups:
-                filter_groups = set(self.user_groups) & set(this_user_groups)
-                if not filter_groups:
-                    continue
+    #         if self.user_groups:
+    #             filter_groups = set(self.user_groups) & set(this_user_groups)
+    #             if not filter_groups:
+    #                 continue
 
-            explicitlyAssignedRoles = []
-            for rolemaker_id, rolemaker in rolemakers:
-                explicitlyAssignedRoles.extend(
-                    rolemaker.getRolesForPrincipal(user))
+    #         explicitlyAssignedRoles = []
+    #         for rolemaker_id, rolemaker in rolemakers:
+    #             explicitlyAssignedRoles.extend(
+    #                 rolemaker.getRolesForPrincipal(user))
 
-            roleList = {}
-            for role in self.portal_roles:
-                canAssign = user.canAssignRole(role)
-                if role == 'Manager' and not self.is_zope_manager:
-                    canAssign = False
-                roleList[role] = {
-                    'canAssign': canAssign,
-                    'explicit': role in explicitlyAssignedRoles,
-                    'inherited': role in allInheritedRoles[userId]}
+    #         roleList = {}
+    #         for role in self.portal_roles:
+    #             canAssign = user.canAssignRole(role)
+    #             if role == 'Manager' and not self.is_zope_manager:
+    #                 canAssign = False
+    #             roleList[role] = {
+    #                 'canAssign': canAssign,
+    #                 'explicit': role in explicitlyAssignedRoles,
+    #                 'inherited': role in allInheritedRoles[userId]}
 
-            canDelete = user.canDelete()
-            canPasswordSet = user.canPasswordSet()
-            if roleList['Manager']['explicit'] or \
-               roleList['Manager']['inherited']:
-                if not self.is_zope_manager:
-                    canDelete = False
-                    canPasswordSet = False
+    #         canDelete = user.canDelete()
+    #         canPasswordSet = user.canPasswordSet()
+    #         if roleList['Manager']['explicit'] or \
+    #            roleList['Manager']['inherited']:
+    #             if not self.is_zope_manager:
+    #                 canDelete = False
+    #                 canPasswordSet = False
 
-            user_info['roles'] = roleList
-            user_info['fullname'] = user.getProperty('fullname', '')
-            user_info['email'] = user.getProperty('email', '')
-            user_info['can_delete'] = canDelete
-            user_info['can_set_email'] = user.canWriteProperty('email')
-            user_info['can_set_password'] = canPasswordSet
-            user_info['council_group'] = self.getGroups(user)
-            user_info['user_status'] = context.get_status(user)
-            results.append(user_info)
+    #         user_info['roles'] = roleList
+    #         user_info['fullname'] = user.getProperty('fullname', '')
+    #         user_info['email'] = user.getProperty('email', '')
+    #         user_info['can_delete'] = canDelete
+    #         user_info['can_set_email'] = user.canWriteProperty('email')
+    #         user_info['can_set_password'] = canPasswordSet
+    #         user_info['council_group'] = self.getGroups(user)
+    #         user_info['user_status'] = context.get_status(user)
+    #         results.append(user_info)
 
-        # Sort the users by fullname
-        results.sort(
-            key=lambda x: x is not None and x['fullname'] is not None and
-            normalizeString(x['fullname']) or '')
+    #     # Sort the users by fullname
+    #     results.sort(
+    #         key=lambda x: x is not None and x['fullname'] is not None and
+    #         normalizeString(x['fullname']) or '')
 
-        # Reset the request variable, just in case.
-        self.request.set('__ignore_group_roles__', False)
-        return results
+    #     # Reset the request variable, just in case.
+    #     self.request.set('__ignore_group_roles__', False)
+    #     return results
 
     def getGroups(self, user):
         """Get user groups."""
@@ -323,6 +343,9 @@ class UserSearchView(UsersGroupsControlPanelView):
         group_names = context.get_groups_title(user_groups)
         return ", ".join(
             [group_name["group_title"] for group_name in group_names])
+
+    def makeQuery(self, **kw):
+        return make_query(**kw)
 
 
 class UserProfileView(BrowserView):
@@ -383,6 +406,7 @@ class UserProfileView(BrowserView):
         manage_by_group = context.get_manage_by_groups()
         manage_all = context.get_manage_all()
 
+        # TODO: "checking for * should be done in get_manage_by_groups"
         if sm.checkPermission(ManagePortal, portal) and not manage_by_group:
             # show all for adminstratior/manager
             manage_by_group = [manage_all]

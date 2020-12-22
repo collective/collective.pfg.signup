@@ -1244,21 +1244,24 @@ class SignUpAdapter(FormActionAdapter):
             return {}
         return manage_group
 
+    def _get_user(self, manager=""):
+        portal_membership = getToolByName(self, 'portal_membership')
+
+        if manager:
+            acl = getToolByName(self, 'acl_users')
+            return acl.getUserById(manager)
+        elif portal_membership.isAnonymousUser():
+            return []
+        else:
+            return portal_membership.getAuthenticatedMember()
+
     def get_manager_groups(self, manager=""):
         """Return common manager groups.
 
         If manager parameter is not provided, Current login user will used.
         """
-        portal_membership = getToolByName(self, 'portal_membership')
-        # portal_groups = getToolByName(self, 'portal_groups')
-        acl = getToolByName(self, 'acl_users')
 
-        if manager:
-            current_user = acl.getUserById(manager)
-        elif portal_membership.isAnonymousUser():
-            return []
-        else:
-            current_user = portal_membership.getAuthenticatedMember()
+        current_user = self._get_user(manager)
 
         user_groups = current_user.getGroups()
         user_management_list = self.get_management_dict()
@@ -1283,6 +1286,9 @@ class SignUpAdapter(FormActionAdapter):
                 manage_by_group = [self.manage_all]
                 break
             manage_by_group += manage_user_group
+
+        if api.user.has_permission(ManagePortal, user=self._get_user(manager)) and not manage_by_group:
+            return [self.manage_all]
 
         return manage_by_group
 

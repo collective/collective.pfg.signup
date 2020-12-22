@@ -27,7 +27,6 @@
                             b_start python:0 if view.newSearch else request.get('b_start',0);
                             b_size python:len(view.searchResults) or 4;
                             context_url context/absolute_url;
-                            portal_roles view/portal_roles;
                             portal_url context/portal_url;">
             <a href="" tal:attributes="href string:javascript:history.back()">Return to main menu</a>
             <p>Please select name or council name.</p>
@@ -46,16 +45,17 @@
                   <table class="listing" summary="User Listing">
                       <tbody>
                           <tr class="odd">
-                              <th colspan="6" tal:attributes="colspan python:len(portal_roles)+4">
-                                  <span tal:omit-tag="" i18n:translate="label_user_search">User Search</span>:
+                              <th colspan="6" >
+                                  <label i18n:translate="label_user_search" for="user_search">User Search</label>:
                                   <input class="quickSearch"
                                          type="text"
+                                         id="user_search"
                                          name="searchstring"
                                          value=""
                                          tal:attributes="value view/searchString;"
                                          />
 
-                                  <span tal:omit-tag="" i18n:translate="label_user_group">User Group</span>:
+                                  <label for="user-groups" i18n:translate="label_user_group">Group</label>:
                                   <select name="user-groups" id="user-groups" multiple="multiple">
                                       <tal:block repeat="group view/search_user_groups">
                                           <tal:block tal:define="is_current python:'current' in group and group['current']" >
@@ -78,7 +78,7 @@
                                   <input type="submit"
                                          class="searchButton"
                                          name="form.button.Search"
-                                         value="Search"
+                                         value="Find Users"
                                          i18n:attributes="value label_search;"
                                          />
 
@@ -114,7 +114,7 @@
                                 </td>
 
                                 <td>
-                                  <span tal:replace="user/council_group">User Group</span>
+                                  <span tal:replace="user/groups">User Group</span>
                                 </td>
 
                                 <td>

@@ -43,15 +43,20 @@ class Layer(PloneSandboxLayer):
         setRoles(portal, TEST_USER_ID, ['Contributor'])
         form = portal[portal.invokeFactory('FormFolder', 'form')]
         signup_adapter = form[form.invokeFactory('SignUpAdapter', 'signup')]
+        form.setActionAdapter('signup')
         form.invokeFactory('FormStringField', 'fullname')
         form.invokeFactory('FormStringField', 'username')
         form.invokeFactory('FormStringField', 'email')
         form.invokeFactory('FormStringField', 'department')
+        form.manage_delObjects(['topic','comments'])
         form.mailer.setRecipient_name('Mail Dummy')
         form.mailer.setRecipient_email('mdummy@address.com')
         form.signup.full_name_field = 'fullname'
         form.signup.username_field = 'username'
         form.signup.email_field = 'email'
+        form.signup.title = 'TODO: should be removed and not required'
+        #api.content.transition(obj=form, transition="submit")
+        #api.content.transition(obj=form, transition="publish")
         # registry = getUtility(IRegistry)
         mail_settings =  IMailSchema(portal)
         mail_settings.email_from_address = 'localhost@plone.org'
@@ -60,9 +65,11 @@ class Layer(PloneSandboxLayer):
         group.setProperties(email ='staff@plone.org')
         admin_group = api.group.create(groupname='Administrators')
         admin_group.setProperties(email ='admin@plone.org')
+        manager_group = api.group.create(groupname='Managers')
+        manager_group.setProperties(email ='managers@plone.org')
         portal_membership = getToolByName(portal, 'portal_membership')
         current_user = portal_membership.getAuthenticatedMember()
-        api.group.add_user(groupname='Administrators', username=current_user.id)
+        api.group.add_user(group=admin_group, user=current_user)
 
     def tearDownZope(self, app):
         """Tear down zope."""

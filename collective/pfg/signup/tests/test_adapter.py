@@ -41,6 +41,8 @@ class TestSignUpAdapter(unittest.TestCase):
         form.clear()
         for key in kwargs.keys():
             form[key] = kwargs[key]
+        self.app.REQUEST['ACTUAL_URL'] = 'http://nohost/form/signup' # HACK for plone 4.1
+        self.app.REQUEST['URL'] = 'http://nohost/form/signup'
         return self.app.REQUEST
 
     def setUp(self):
