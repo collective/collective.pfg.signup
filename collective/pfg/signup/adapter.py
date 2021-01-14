@@ -214,13 +214,10 @@ class SignUpAdapter(FormActionAdapter):
         """Initialize class."""
         FormActionAdapter.__init__(self, oid, **kwargs)
         self.waiting_list = OOBTree()
-        self.mail_settings = IMailSchema(getUtility(ISiteRoot))
         
-    # @property
-    # def mail_settings(self):
-    #     # registry = getUtility(IRegistry)
-    #     #return registry.forInterface(IMailSchema, prefix='plone')
-    #     return IMailSchema(self.context)
+    @property
+    def mail_settings(self):
+        return IMailSchema(getUtility(ISiteRoot))
 
     def getPolicy(self, data):
         """Get the policy for how the signup adapter should treat the user.

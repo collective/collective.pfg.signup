@@ -42,7 +42,9 @@ jobs:
             ~/buildout-cache
             ~/extends
             ~/.cache/pip
-          key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
+          key: ${{ runner.os }}-buildout-${{ hashFiles('**/*.cfg') }}-${{ matrix.plone-version }}-${{ matrix.python-version }}
+          restore-keys: |
+            ${{ runner.os }}-buildout-
       - name: setup buildout cache
         run: |
             mkdir -p ~/buildout-cache/{eggs,downloads}

@@ -16,6 +16,8 @@ except ImportError:
 from plone import api
 from plone.app.robotframework.testing import REMOTE_LIBRARY_BUNDLE_FIXTURE
 from plone.testing.z2 import ZSERVER_FIXTURE
+from Products.MailHost.interfaces import IMailHost
+from zope.component import getSiteManager
 
 class Layer(PloneSandboxLayer):
 
@@ -57,10 +59,7 @@ class Layer(PloneSandboxLayer):
         form.signup.title = 'TODO: should be removed and not required'
         #api.content.transition(obj=form, transition="submit")
         #api.content.transition(obj=form, transition="publish")
-        # registry = getUtility(IRegistry)
-        mail_settings =  IMailSchema(portal)
-        mail_settings.email_from_address = 'localhost@plone.org'
-        mail_settings.email_from_name = u'Plone'
+
         group = api.group.create(groupname='staff')
         group.setProperties(email ='staff@plone.org')
         admin_group = api.group.create(groupname='Administrators')
@@ -70,6 +69,19 @@ class Layer(PloneSandboxLayer):
         portal_membership = getToolByName(portal, 'portal_membership')
         current_user = portal_membership.getAuthenticatedMember()
         api.group.add_user(group=admin_group, user=current_user)
+       
+        # We need to fake a valid mail setup
+        mail_settings =  IMailSchema(portal)
+        mail_settings.email_from_address = 'localhost@plone.org'
+        mail_settings.email_from_name = u'Plone'
+
+        # Set up a mock mailhost
+        from Products.CMFPlone.tests.utils import MockMailHost # for some reason importing this globally messes with permissions
+        portal._original_MailHost = portal.MailHost
+        portal.MailHost = mailhost = MockMailHost('MailHost')
+        sm = getSiteManager(context=portal)
+        sm.unregisterUtility(provided=IMailHost)
+        sm.registerUtility(mailhost, provided=IMailHost)
 
     def tearDownZope(self, app):
         """Tear down zope."""

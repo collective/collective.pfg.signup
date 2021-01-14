@@ -15,6 +15,12 @@ class TestSignUpAdapter(unittest.TestCase):
 
     layer = INTEGRATION_TESTING
 
+    def setUp(self):
+        self.app = self.layer['app']
+        self.portal = self.layer['portal']
+        form = self.portal['form']
+        form.checkAuthenticator = False # no csrf protection
+        self.form = form
 
     def test_correctly_installed(self):
         """Test on sign up adapter is correctly installed."""
@@ -30,12 +36,6 @@ class TestSignUpAdapter(unittest.TestCase):
         signup_adapter = form[form.invokeFactory('SignUpAdapter', 'signup1')]
         self.assertEqual(signup_adapter.portal_type, 'SignUpAdapter')
 
-    def dummy_send( self, mfrom, mto, messageText, immediate=False ):
-        self.mfrom = mfrom
-        self.mto = mto
-        self.messageText = messageText
-        self.messageBody = '\n\n'.join(messageText.split('\n\n')[1:])
-
     def LoadRequestForm(self, **kwargs):
         form = self.app.REQUEST.form
         form.clear()
@@ -44,16 +44,6 @@ class TestSignUpAdapter(unittest.TestCase):
         self.app.REQUEST['ACTUAL_URL'] = 'http://nohost/form/signup' # HACK for plone 4.1
         self.app.REQUEST['URL'] = 'http://nohost/form/signup'
         return self.app.REQUEST
-
-    def setUp(self):
-        self.app = self.layer['app']
-        portal = self.layer['portal']
-        form = portal['form']
-        form.checkAuthenticator = False # no csrf protection
-        self.mailhost = form.MailHost
-        self.mailhost._send = self.dummy_send
-        self.form = form
-
 
     def test_auto_register(self):
         signup = self.form.signup
@@ -115,6 +105,10 @@ class TestSignUpAdapter(unittest.TestCase):
         signup.onSuccess(fields, request)
         user = api.user.get(username='test1')
         self.assertIsNone(user, 'User created before approving')
+        self.assertTrue(self.portal.MailHost.messages[0])
+        self.assertIn('There is a user waiting for approval', self.portal.MailHost.messages[1])
+        self.assertIn('From: localhost@plone.org', self.portal.MailHost.messages[1])
+        self.assertIn('To: admin@plone.org', self.portal.MailHost.messages[1])
         self.REQUEST = self.LoadRequestForm( userid='test1')
         signup.approve_user()
         user = api.user.get(username='test1')
@@ -139,11 +133,9 @@ class TestSignUpAdapter(unittest.TestCase):
         fields = self.form._getFieldObjects()
         request = self.LoadRequestForm(fullname='test name', username='test1', email='test@mail.com')
         signup.onSuccess(fields, request)
-        self.failUnless(self.messageText.find('This link is valid for 168 hours') >= 0)
-        self.assertEqual(self.mto, ['test@mail.com'])
-        self.failUnless(self.messageText.find('To: test@mail.com') >= 0)
-        self.assertEqual(self.mfrom, '"Plone" <localhost@plone.org>')
-        self.failUnless(self.messageText.find('localhost@plone.org') >= 0)
+        self.assertIn('This link is valid for 168 hours', self.portal.MailHost.messages[0])
+        self.assertIn('To: test@mail.com\n', self.portal.MailHost.messages[0])
+        self.assertIn('From: Plone <localhost@plone.org>\n', self.portal.MailHost.messages[0])
 
     def test_send_approving_email(self):
         self.form.signup.user_group_template = Expression('string:staff')
@@ -152,8 +144,11 @@ class TestSignUpAdapter(unittest.TestCase):
         fields = self.form._getFieldObjects()
         request = self.LoadRequestForm(fullname='test name', username='test1', email='test@mail.com')
         signup.onSuccess(fields, request)
-        self.failUnless(self.messageText.find('There is a user waiting for approval') >= 0)
-        self.assertEqual(self.mto, ['admin@plone.org'])
-        self.failUnless(self.messageText.find('To: admin@plone.org') >= 0)
-        self.assertEqual(self.mfrom, 'localhost@plone.org')
-        self.failUnless(self.messageText.find('localhost@plone.org') >= 0)
+
+        self.assertIn('Your\n                account is waiting for approval', self.portal.MailHost.messages[0])
+        self.assertIn('To: test@mail.com', self.portal.MailHost.messages[0])
+        self.assertIn('From: localhost@plone.org', self.portal.MailHost.messages[-1])
+
+        self.assertIn('There is a user waiting for approval', self.portal.MailHost.messages[1])
+        self.assertIn('To: admin@plone.org', self.portal.MailHost.messages[1])
+        self.assertIn('From: localhost@plone.org', self.portal.MailHost.messages[1])
