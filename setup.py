@@ -40,6 +40,7 @@ setup(name='collective.pfg.signup',
           'setuptools',
           'Plone',
           'Products.PloneFormGen',
+          'plone.api >= 1.3.0' # for api.user.has_permission
       ],
       extras_require={
         'test': ['plone.app.testing',

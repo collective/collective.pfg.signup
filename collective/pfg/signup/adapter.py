@@ -1283,7 +1283,6 @@ class SignUpAdapter(FormActionAdapter):
                 manage_by_group = [self.manage_all]
                 break
             manage_by_group += manage_user_group
-
         if api.user.has_permission(ManagePortal, user=self._get_user(manager)) and not manage_by_group:
             return [self.manage_all]
 
