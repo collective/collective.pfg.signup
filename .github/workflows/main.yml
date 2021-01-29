@@ -11,12 +11,19 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        fail-fast: false
         python-version: ['2.7']
         plone-version: 
           - '4.1'
           - '4.3'
           - '5.0'
           - '5.1'
+        #   - '5.2'
+        # include:
+        #   - plone-version: 5.2
+        #     python-version: 3.7
+        #   - plone-version: 5.2
+        #     python-version: 3.8
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python
@@ -71,16 +78,29 @@ jobs:
             bin/test --all 
       - name: code-analysis
         run: echo "${{ matrix.plone-version }}" | grep 5.1 || bin/code-analysis  
-      # - name: createcoverage
-      #   run: |
-      #       bin/createcoverage
-      #       pip install -q coveralls
-      #       coveralls
+      - name: createcoverage
+        run: |
+            bin/createcoverage
+            bin/coverage json -i
+      - name: Coveralls
+        uses: AndreMiras/coveralls-python-action@develop
+        with:
+          parallel: true
+          flag-name: ${{ matrix.plone-version }}-${{ matrix.python-version }}     
       # - name: Archive test results
       #   if: failure()
       #   uses: actions/upload-artifact@v1
       #   with:
       #     name: test_results
       #     path: ./test
+
+  coveralls_finish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Coveralls Finished
+      uses: AndreMiras/coveralls-python-action@develop
+      with:
+        parallel-finished: true
 
 
