@@ -55,6 +55,25 @@ def get_browser(layer, url=None, auth=True, role="Editor", approval_group=None):
         browser.open(layer['portal'].absolute_url() + '/' + url)
     return browser
 
+def make_user(login, fullname, password=None):
+    registration = api.portal.get_tool('portal_registration')
+    user_id = login+'_' # ensure login is different from the userid
+    email = "{}@blah.com".format(login)
+    properties = {}
+    properties.update(username=login) 
+    properties.update(email=email)
+    properties.update(fullname=fullname)
+    password = password if password is not None else '12345'
+    roles = []
+
+    registration.addMember(
+        user_id,
+        password,
+        roles,
+        properties=properties,
+    )
+    portal_membership = api.portal.get_tool('portal_membership')
+    return portal_membership.getMemberById(user_id)
 
 def test_register_user_without_approval():
     """
@@ -88,7 +107,7 @@ def test_search_user():
     """
     Create a user
 
-        >>> user = api.user.create(username='mylogin',email="me@me.com", properties=dict(fullname="Fred")) # TODO: set userid different
+        >>> user = make_user("mylogin", "Fred")
         >>> api.group.add_user(groupname="staff", user=user)
         >>> b = get_browser(layer, 'form/signup/@@user_search_view', approval_group="staff")
 
@@ -109,8 +128,8 @@ def test_search_user():
 def test_list_user_in_group():
     """
     Create two users
-        >>> notingroup = api.user.create(username='notingroup',email="me2@me.com", properties=dict(fullname="Not in group"))
-        >>> mylogin = api.user.create(username='mylogin',email="me@me.com", properties=dict(fullname="Fred"))
+        >>> notingroup = make_user('notingroup', "Not in group")
+        >>> mylogin = make_user('mylogin', "Fred")
         >>> api.group.add_user(groupname="staff", user=mylogin)
         >>> transaction.commit()
         >>> b = get_browser(layer, 'form/signup/@@user_search_view', approval_group="staff")
@@ -157,7 +176,7 @@ def test_deactivate_user():
     """
     Create a user
 
-        >>> user = api.user.create(username='mylogin', email="me@me.com", password="blahblah", properties=dict(fullname="Fred")) # TODO: set userid different
+        >>> user = make_user('mylogin',"Fred", password="blahblah")
         >>> api.group.add_user(groupname="staff", user=user)
         >>> b = get_browser(layer, 'form/signup/@@user_search_view', approval_group="staff")
 
