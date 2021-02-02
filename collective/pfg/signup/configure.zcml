@@ -3,7 +3,9 @@
     xmlns:five="http://namespaces.zope.org/five"
     xmlns:browser="http://namespaces.zope.org/browser"
     xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
-    i18n_domain="collective.pfg.signup">
+    xmlns:monkey="http://namespaces.plone.org/monkey"
+    xmlns:zcml="http://namespaces.zope.org/zcml"
+   i18n_domain="collective.pfg.signup">
 
     <includeDependencies package="." />
 
@@ -53,5 +55,18 @@
         id="collective.pfg.signup.addSignUpAdapter"
         title="collective.pfg.signup: Add SignUpAdapter"
         />
+
+    <include package="collective.monkeypatcher" />
+
+    <!-- only do for 5.1 or lower  -->
+    <monkey:patch
+        description="Needed to deactivate user when login != userid"
+        zcml:condition="not-have plone-52"
+        class="Products.CMFCore.MemberDataTool.MemberData"
+        original="setSecurityProfile"
+        replacement=".patches.setSecurityProfile"
+        preserveOriginal="true"
+        />
+
 
 </configure>
