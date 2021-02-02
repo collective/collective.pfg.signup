@@ -223,7 +223,7 @@ class UserSearchView(BrowserView):
             for user_info in results:
                 userId = user_info['id']
                 user = acl.getUserById(userId)
-                member = mtool.getMemberById(userId)
+                user_info['login'] = user.getUserName() # fix bug when searching by email or fullname
                 user_info['groups'] = self.getGroups(user)
                 user_info['user_status'] = context.get_status(user)
                 # filter out users who we don't manage

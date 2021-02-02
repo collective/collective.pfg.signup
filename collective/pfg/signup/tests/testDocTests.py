@@ -177,27 +177,19 @@ def test_search_user_by_email():
         ...
     """
 
-# def test_search_user_by_userid():
-#     """
-#         >>> user = make_user("mylogin", "Fred")
-#         >>> api.group.add_user(groupname="staff", user=user)
-#         >>> b = get_browser(layer, 'form/signup/@@user_search_view', approval_group="staff")
+def test_search_user_by_userid():
+    """
+        >>> user = make_user("mylogin", "Fred")
+        >>> api.group.add_user(groupname="staff", user=user)
+        >>> b = get_browser(layer, 'form/signup/@@user_search_view', approval_group="staff")
 
-#     Search by userid
-#         >>> b.open("@@user_search_view")
-#         >>> b.getControl("User Search").value = "mylogin_"
-#         >>> b.getControl("Find Users").click()
-#         >>> 'No matches' not in b.contents
-#         True
-#         >>> print b.contents
-#         <...
-#         ...
-#         ...mylogin
-#         ...Fred
-#         ...staff
-#         ...Active
-#         ...
-#     """
+    You can't Search by userid
+        >>> b.open("@@user_search_view")
+        >>> b.getControl("User Search").value = "mylogin_"
+        >>> b.getControl("Find Users").click()
+        >>> 'No matches' not in b.contents
+        False
+    """
 
 def test_search_user_by_login_group():
     """
