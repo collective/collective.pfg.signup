@@ -109,17 +109,18 @@ def test_register_user_without_approval():
     """
     pass
 
-def test_search_user():
+def test_search_user_by_login():
     """
-    Create a user
-
         >>> user = make_user("mylogin", "Fred")
         >>> api.group.add_user(groupname="staff", user=user)
         >>> b = get_browser(layer, 'form/signup/@@user_search_view', approval_group="staff")
 
+    Search by login
         >>> b.open("@@user_search_view")
         >>> b.getControl("User Search").value = "mylogin"
         >>> b.getControl("Find Users").click()
+        >>> 'No matches' not in b.contents
+        True
         >>> print b.contents
         <...
         ...
@@ -128,6 +129,98 @@ def test_search_user():
         ...staff
         ...Active
         ...
+        >>> b.getLink("mylogin").url
+        'http://.../user_profile_view?userid=mylogin_&loginid=mylogin'
+    """
+
+def test_search_user_by_fullname():
+    """
+        >>> user = make_user("mylogin", "Fred")
+        >>> api.group.add_user(groupname="staff", user=user)
+        >>> b = get_browser(layer, 'form/signup/@@user_search_view', approval_group="staff")
+
+    Search by fullname
+        >>> b.open("@@user_search_view")
+        >>> b.getControl("User Search").value = "Fred"
+        >>> b.getControl("Find Users").click()
+        >>> 'No matches' not in b.contents
+        True
+        >>> print b.contents
+        <...
+        ...
+        ...mylogin
+        ...Fred
+        ...staff
+        ...Active
+        ...
+    """
+
+def test_search_user_by_email():
+    """
+        >>> user = make_user("mylogin", "Fred")
+        >>> api.group.add_user(groupname="staff", user=user)
+        >>> b = get_browser(layer, 'form/signup/@@user_search_view', approval_group="staff")
+
+    Search by userid
+        >>> b.open("@@user_search_view")
+        >>> b.getControl("User Search").value = "mylogin@blah.com"
+        >>> b.getControl("Find Users").click()
+        >>> 'No matches' not in b.contents
+        True
+        >>> print b.contents
+        <...
+        ...
+        ...mylogin
+        ...Fred
+        ...staff
+        ...Active
+        ...
+    """
+
+# def test_search_user_by_userid():
+#     """
+#         >>> user = make_user("mylogin", "Fred")
+#         >>> api.group.add_user(groupname="staff", user=user)
+#         >>> b = get_browser(layer, 'form/signup/@@user_search_view', approval_group="staff")
+
+#     Search by userid
+#         >>> b.open("@@user_search_view")
+#         >>> b.getControl("User Search").value = "mylogin_"
+#         >>> b.getControl("Find Users").click()
+#         >>> 'No matches' not in b.contents
+#         True
+#         >>> print b.contents
+#         <...
+#         ...
+#         ...mylogin
+#         ...Fred
+#         ...staff
+#         ...Active
+#         ...
+#     """
+
+def test_search_user_by_login_group():
+    """
+        >>> user = make_user("mylogin", "Fred")
+        >>> api.group.add_user(groupname="staff", user=user)
+        >>> b = get_browser(layer, 'form/signup/@@user_search_view', approval_group="staff")
+
+    Search by login and group
+
+        >>> b.getControl("User Search").value = "mylogin"
+        >>> b.getControl("Group").value = ["staff"]
+        >>> b.getControl("Find Users").click()
+        >>> 'No matches' not in b.contents
+        True
+        >>> print b.contents
+        <...
+        ...
+        ...mylogin
+        ...Fred
+        ...staff
+        ...Active
+        ...
+
     """
 
 def test_search_by_group():
