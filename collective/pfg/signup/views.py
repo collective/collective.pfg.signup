@@ -186,13 +186,13 @@ class UserSearchView(BrowserView):
         self.many_users =  self.usersview.many_users
         self.many_groups = self.usersview.many_groups # used yet 
         #TODO: what if many_groups? should disable query by group. If many users should we show all in a group too?
+        gtool = getToolByName(context, 'portal_groups')
+        mtool = getToolByName(context, 'portal_membership')
 
         # Do search with query or by group, or if not many_users set then display everyone
         if self.searchString or group_filter or not self.many_users:
             if not self.searchString and group_filter:
                 # it's more efficient to list out the users of a particular group since there could be many users
-                gtool = getToolByName(context, 'portal_groups')
-                mtool = getToolByName(context, 'portal_membership')
                 def get_users(groups, found=set()):
                     "recursively get memembers of the group"
                     results =[]
@@ -223,6 +223,7 @@ class UserSearchView(BrowserView):
             for user_info in results:
                 userId = user_info['id']
                 user = acl.getUserById(userId)
+                member = mtool.getMemberById(userId)
                 user_info['groups'] = self.getGroups(user)
                 user_info['user_status'] = context.get_status(user)
                 # filter out users who we don't manage

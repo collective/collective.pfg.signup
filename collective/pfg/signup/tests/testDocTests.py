@@ -12,6 +12,7 @@ import transaction
 import unittest
 from plone.app.testing import TEST_USER_ID, TEST_USER_PASSWORD, SITE_OWNER_NAME, SITE_OWNER_PASSWORD
 from Products.CMFCore.Expression import Expression
+from Products.CMFPlone.utils import set_own_login_name
 
 
 optionflags = (
@@ -67,7 +68,7 @@ def make_user(login, fullname, password=None):
     properties.update(fullname=fullname)
     password = password if password is not None else '12345'
     roles = []
-
+    
     registration.addMember(
         user_id,
         password,
@@ -75,7 +76,10 @@ def make_user(login, fullname, password=None):
         properties=properties,
     )
     portal_membership = api.portal.get_tool('portal_membership')
-    return portal_membership.getMemberById(user_id)
+    member = portal_membership.getMemberById(user_id)
+    # Not sure why this is needed
+    set_own_login_name(member, login)
+    return member
 
 def test_register_user_without_approval():
     """
