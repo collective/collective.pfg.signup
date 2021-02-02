@@ -133,11 +133,11 @@ def test_search_user():
 def test_search_by_group():
     """
     One user in staff
-        >>> staff1 = api.user.create(username='mystaff1',email="me1@me.com", properties=dict(fullname="Fred"))
+        >>> staff1 = make_user('mystaff1', "Fred")
         >>> api.group.add_user(groupname="staff", user=staff1)
 
     One user in staff2
-        >>> staff2 = api.user.create(username='mystaff2',email="me2@me.com", properties=dict(fullname="Sally"))
+        >>> staff2 = make_user('mystaff2', "Sally")
         >>> group = api.group.create(groupname='staff2')
         >>> api.group.add_user(group=group, user=staff2)
 
@@ -245,8 +245,8 @@ def test_group_in_group():
     Not clear if you should expect to manage people in a subgroup or not.
     So far functionality has been to allow editing subgroup users so will test and keep that
 
-        >>> notingroup = api.user.create(username='notingroup',email="me2@me.com", properties=dict(fullname="Not in group"))
-        >>> mylogin = api.user.create(username='mylogin',email="me@me.com", properties=dict(fullname="Fred"))
+        >>> notingroup = make_user('notingroup', "Not in group")
+        >>> mylogin = make_user('mylogin', "Fred")
         >>> api.group.add_user(groupname="staff", user=mylogin)
 
         >>> superstaff = api.group.create(groupname="superstaff")
@@ -268,19 +268,19 @@ def test_group_in_group():
     
     Ensure we view profile of users we don't manage
         >>> url = layer['portal'].absolute_url() + '/form/signup'
-        >>> b.open("{}/user_profile_view?userid={}".format(url, 'notingroup'))
+        >>> b.open("{}/user_profile_view?userid={}".format(url, 'notingroup_'))
         >>> print b.contents
         <...
         ...Not in group...
 
     or edit
-        >>> b.open("{}/user_edit_view?userid={}".format(url, 'notingroup'))
+        >>> b.open("{}/user_edit_view?userid={}".format(url, 'notingroup_'))
         >>> print b.contents
         <...
         ...Not in group...
 
     or deactivate
-        >>> b.open("{}/user_profile_view?userid={}".format(url, 'notingroup'))
+        >>> b.open("{}/user_profile_view?userid={}".format(url, 'notingroup_'))
         >>> b.getControl("Deactivate").click()
         >>> print b.contents
         <...
