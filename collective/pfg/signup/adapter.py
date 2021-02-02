@@ -696,7 +696,7 @@ class SignUpAdapter(FormActionAdapter):
 
         # Products.CMFCore was upgraded past 2.3.0 in Plone 5.2
         # See: https://github.com/plone/buildout.coredev/commit/557884e51426c9fa8d3af63aed8e7777509c285b
-        if api.env.plone_version < '5.2':
+        if api.env.plone_version() >= '5.2':
             user_data.setSecurityProfile(password=password)
             return
 
@@ -753,7 +753,7 @@ class SignUpAdapter(FormActionAdapter):
                 'last_updated_by': current_user_id,
                 'last_updated_date': current_time})
             passwd = self.id_generator(size=32)
-            user.setSecurityProfile(password=passwd)
+            #user.setSecurityProfile(password=passwd)
             self._setSecurityProfile(user_data=user, password=passwd)
             self.plone_utils.addPortalMessage(
                 _(u'This user is deactivated.'))
@@ -1266,7 +1266,7 @@ class SignUpAdapter(FormActionAdapter):
         return common_groups
 
     def get_manage_by_groups(self, manager=""):
-        """Return a list of group ids that manage by manager.
+        """Return a list of group ids that are managed by manager.
 
         '*' meaning all users.
         If manager parameter is not provided, current login user will used.
@@ -1283,6 +1283,7 @@ class SignUpAdapter(FormActionAdapter):
                 manage_by_group = [self.manage_all]
                 break
             manage_by_group += manage_user_group
+
         if api.user.has_permission(ManagePortal, user=self._get_user(manager)) and not manage_by_group:
             return [self.manage_all]
 

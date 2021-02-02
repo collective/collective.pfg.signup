@@ -323,6 +323,7 @@ def test_deactivate_user():
         ...
 
         >>> b.getLink("mylogin").click()
+        >>> b.handleErrors = False
         >>> b.getControl("Deactivate").click()
         >>> print b.contents
         <...
