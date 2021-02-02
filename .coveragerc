@@ -1,0 +1,9 @@
+[run]
+relative_files = True
+
+[report]
+include =
+    collective/*
+omit =
+    */test*
+
