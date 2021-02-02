@@ -1,6 +1,11 @@
 collective.pfg.signup
 =====================
 
+![CI](https://github.com/collective/collective.pfg.signup/workflows/CI/badge.svg)
+
+[![Coverage Status](https://coveralls.io/repos/github/collective/collective.pfg.signup/badge.svg?branch=fix_userid_username)](https://coveralls.io/github/collective/collective.pfg.signup?branch=fix_userid_username)
+
+
 .. contents::
 
 Introduction
