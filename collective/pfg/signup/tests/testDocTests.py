@@ -68,7 +68,7 @@ def make_user(login, fullname, password=None):
     properties.update(fullname=fullname)
     password = password if password is not None else '12345'
     roles = []
-    
+
     registration.addMember(
         user_id,
         password,
@@ -221,19 +221,19 @@ def test_only_see_users_you_manage():
 
     Ensure we view profile of users we don't manage
         >>> url = layer['portal'].absolute_url() + '/form/signup'
-        >>> b.open("{}/user_profile_view?userid={}".format(url, 'notingroup'))
+        >>> b.open("{}/user_profile_view?userid={}".format(url, 'notingroup_'))
         >>> print b.contents
         <...
         ...Insufficient Privileges...
 
     or deactivate
-        >>> b.open("{}/user_profile_view?userid={}&form.button.deactivate=1".format(url, 'notingroup'))
+        >>> b.open("{}/user_profile_view?userid={}&form.button.deactivate=1".format(url, 'notingroup_'))
         >>> print b.contents
         <...
         ...Insufficient Privileges...
 
     or edit
-        >>> b.open("{}/user_edit_view?userid={}".format(url, 'notingroup'))
+        >>> b.open("{}/user_edit_view?userid={}".format(url, 'notingroup_'))
         >>> print b.contents
         <...
         ...Insufficient Privileges...
