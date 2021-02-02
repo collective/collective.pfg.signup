@@ -46,7 +46,7 @@
                       <tbody>
                           <tr class="odd">
                               <th colspan="6" >
-                                  <label i18n:translate="label_user_search" for="user_search">User Search</label>:
+                                  <label i18n:translate="label_user_search" for="user_search" style="display: inline-block">User Search</label>:
                                   <input class="quickSearch"
                                          type="text"
                                          id="user_search"
@@ -55,7 +55,7 @@
                                          tal:attributes="value view/searchString;"
                                          />
 
-                                  <label for="user-groups" i18n:translate="label_user_group">Group</label>:
+                                  <label for="user-groups" i18n:translate="label_user_group" style="display: inline-block">Group</label>:
                                   <select name="user-groups" id="user-groups" multiple="multiple">
                                       <tal:block repeat="group view/search_user_groups">
                                           <tal:block tal:define="is_current python:'current' in group and group['current']" >

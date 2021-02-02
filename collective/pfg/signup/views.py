@@ -32,6 +32,8 @@ except ImportError:
     # Before Plone 5.0.8
     from plone.app.controlpanel.usergroups import UsersGroupsControlPanelView
 
+UNAUTHORISED_ERROR = "You don't have permission to manage this user"
+
 
 logger = logging.getLogger('collective.pfg.signup')
 
@@ -155,7 +157,6 @@ class UserSearchView(BrowserView):
         # submitted = form.get('form.submitted', False)
         search = form.get('form.button.Search', None) is not None
         # findAll = form.get('form.button.FindAll', None) is not None
-        self.user_groups = form.get('user-groups', '')
         # self.searchString = not findAll and form.get('searchstring', '')
         # or ''
         self.searchString = form.get('searchstring', '')
@@ -171,23 +172,53 @@ class UserSearchView(BrowserView):
         # all_user_groups = set(manage_by_group) | set(manager_groups)
         group_names = context.get_groups_title(manage_by_group)
 
-        if self.user_groups and type(self.user_groups) != list:
-            self.user_groups = [self.user_groups]
+        group_filter = form.get('user-groups', '')
+        if group_filter and type(group_filter) != list:
+            group_filter = set([group_filter])
 
         # find the current groups
-        for current_group_name in self.user_groups:
+        for current_group_name in group_filter:
             for group_name in group_names:
                 if group_name["group_id"] == current_group_name:
                     group_name["current"] = True
         self.search_user_groups = group_names
 
         self.many_users =  self.usersview.many_users
-#        self.user_groups = self.usersview.user_groups
+        self.many_groups = self.usersview.many_groups # used yet 
+        #TODO: what if many_groups? should disable query by group. If many users should we show all in a group too?
 
-        # Only search for all ('') if the many_users flag is not set.
-        if not self.usersview.many_users or bool(self.searchString) or self.usersview.user_groups:
-            results = self.usersview.doSearch(self.searchString)
-            
+        # Do search with query or by group, or if not many_users set then display everyone
+        if self.searchString or group_filter or not self.many_users:
+            if not self.searchString and group_filter:
+                # it's more efficient to list out the users of a particular group since there could be many users
+                gtool = getToolByName(context, 'portal_groups')
+                mtool = getToolByName(context, 'portal_membership')
+                def get_users(groups, found=set()):
+                    "recursively get memembers of the group"
+                    results =[]
+                    for group in groups:
+                        found.add(group) # Just in case of recursive groups?
+                        for user_id in gtool.getGroupMembers(group):
+                            if user_id in found:
+                                continue
+                            user = mtool.getMemberById(user_id)
+                            if user is None:
+                                # It's a group. We should manage users of that group also
+                                results.extend(get_users([user_id], found))
+                                continue
+                            results.append(dict(
+                                login=user.getUserName(),
+                                fullname=user.getProperty('fullname',''),
+                                email=user.getProperty('email',''),
+                                id=user.id,
+                                userid=user.id))
+                            found.add(user_id)
+                    return results
+                results = get_users(group_filter)
+                results.sort(key=lambda u: u['fullname'])
+            else:
+                # use search feature first and then filter by group later
+                results = self.usersview.doSearch(self.searchString)
             acl = getToolByName(self, 'acl_users')
             for user_info in results:
                 userId = user_info['id']
@@ -197,7 +228,10 @@ class UserSearchView(BrowserView):
                 # filter out users who we don't manage
                 if  self.context.manage_all not in manage_by_group and not user_info['groups']:
                     continue
+                if group_filter and not set(user.getGroups()).intersection(group_filter):
+                    continue
                 self.searchResults.append(user_info)
+
 
         return self.index()
 
@@ -285,7 +319,7 @@ class UserProfileView(BrowserView):
             manage_by_group = [manage_all]
 
         if not manage_by_group:
-            return self.index()
+            raise Unauthorized(UNAUTHORISED_ERROR)
 
         user = portal_membership.getMemberById(self.userid)
         if not user:
@@ -299,7 +333,7 @@ class UserProfileView(BrowserView):
             # TODO((ivan) limit the search instead of doing it after that
             same_groups = set(manage_by_group) & set(user_groups)
             if not same_groups:
-                return self.index()
+                raise Unauthorized(UNAUTHORISED_ERROR)
 
         self.user_fullname = user.getProperty('fullname', '')
         self.user_email = user.getProperty('email', '')
@@ -397,7 +431,7 @@ class UserEditView(BrowserView):
             manage_by_group = [manage_all]
 
         if not manage_by_group:
-            return self.index()
+            raise Unauthorized(UNAUTHORISED_ERROR)
 
         user = portal_membership.getMemberById(self.userid)
         if not user:
@@ -411,7 +445,7 @@ class UserEditView(BrowserView):
             # TODO(ivan) limit the search instead of doing it after that
             same_groups = set(manage_by_group) & set(user_groups)
             if not same_groups:
-                return self.index()
+                raise Unauthorized(UNAUTHORISED_ERROR)
 
         self.user_fullname = user.getProperty('fullname', '')
         self.user_email = user.getProperty('email', '')

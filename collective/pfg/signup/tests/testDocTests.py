@@ -43,8 +43,10 @@ def get_browser(layer, url=None, auth=True, role="Editor", approval_group=None):
         ) # TODO: why have to use contributor? Should work with lower role
         api.group.add_user(groupname="Managers", user=user)
         if approval_group:
-            layer['portal'].form.signup.user_group_template = Expression('string:{}'.format(approval_group))
-            tal = 'python:{"Managers": ["%s"]}' % approval_group
+            if type(approval_group) != list:
+                approval_group = [approval_group]
+            layer['portal'].form.signup.user_group_template = Expression('string:{}'.format(approval_group[0]))
+            tal = 'python:{"Managers": %s}' % repr(approval_group)
             layer['portal'].form.signup.manage_group_template = Expression(tal)
 
         transaction.commit()
@@ -122,12 +124,79 @@ def test_search_user():
         ...staff
         ...Active
         ...
+    """
+
+def test_search_by_group():
+    """
+    One user in staff
+        >>> staff1 = api.user.create(username='mystaff1',email="me1@me.com", properties=dict(fullname="Fred"))
+        >>> api.group.add_user(groupname="staff", user=staff1)
+
+    One user in staff2
+        >>> staff2 = api.user.create(username='mystaff2',email="me2@me.com", properties=dict(fullname="Sally"))
+        >>> group = api.group.create(groupname='staff2')
+        >>> api.group.add_user(group=group, user=staff2)
+
+        >>> transaction.commit()
+
+    Ensure we are the manager of both groups
+        >>> b = get_browser(layer, 'form/signup/@@user_search_view', approval_group=["staff","staff2"])
+
+    So we should see both users
+        >>> b.open("@@user_search_view")
+        >>> print b.contents
+        <...
+        ...mystaff1...Fred...
+        ...
+        ...mystaff2...Sally...
+        ...
+
+    and limit to a group staff
+        >>> b.getControl("Group").options
+        ['staff', 'staff2']
+        >>> b.getControl("Group").value = ["staff"]
+        >>> b.getControl("Find Users").click()
+        >>> print b.contents
+        <...
+        ...mystaff1...Fred...
+        ...
+        >>> 'mystaff2' in b.contents
+        False
+
+    and limit to a group staff2
+        >>> b.getControl("Group").value = ["staff2"]
+        >>> b.getControl("Find Users").click()
+        >>> print b.contents
+        <...
+        ...mystaff2...Sally...
+        ...
+        >>> 'mystaff1' in b.contents
+        False
+
+    keyword and group filter can work togeather
+        >>> b.getControl("User Search").value = "dummy"
+        >>> b.getControl("Group").value = ["staff2"]
+        >>> b.getControl("Find Users").click()
+        >>> 'mystaff1' in b.contents
+        False
+        >>> 'mystaff2' in b.contents
+        False
+
+        >>> b.getControl("User Search").value = "mystaff"
+        >>> b.getControl("Group").value = ["staff2"]
+        >>> b.getControl("Find Users").click()
+        >>> 'mystaff1' in b.contents
+        False
+        >>> 'mystaff2' in b.contents
+        True
+
 
     """
 
-def test_list_user_in_group():
+
+def test_only_see_users_you_manage():
     """
-    Create two users
+    Create two users. One in a group we control. and one in our staff group
         >>> notingroup = make_user('notingroup', "Not in group")
         >>> mylogin = make_user('mylogin', "Fred")
         >>> api.group.add_user(groupname="staff", user=mylogin)
@@ -135,26 +204,85 @@ def test_list_user_in_group():
         >>> b = get_browser(layer, 'form/signup/@@user_search_view', approval_group="staff")
 
 
-    Now we can users but only in teh groups we control
         >>> b.open("@@user_search_view")
-        >>> b.getControl("Group").options
-        ['staff']
-        >>> 'notingroup' not in b.contents
-        True
+
+    We can users but only in teh groups we control
+        >>> 'notingroup' in b.contents
+        False
+
         >>> print b.contents
         <...
         ...mylogin...
         ...
 
-    and limit to a group
-        >>> b.getControl("Group").value = ["staff"]
-        >>> b.getControl("Find Users").click()
+    Ensure we view profile of users we don't manage
+        >>> url = layer['portal'].absolute_url() + '/form/signup'
+        >>> b.open("{}/user_profile_view?userid={}".format(url, 'notingroup'))
         >>> print b.contents
         <...
-        ...mylogin...
-        ...
-        >>> 'notingroup' not in b.contents
+        ...Insufficient Privileges...
+
+    or deactivate
+        >>> b.open("{}/user_profile_view?userid={}&form.button.deactivate=1".format(url, 'notingroup'))
+        >>> print b.contents
+        <...
+        ...Insufficient Privileges...
+
+    or edit
+        >>> b.open("{}/user_edit_view?userid={}".format(url, 'notingroup'))
+        >>> print b.contents
+        <...
+        ...Insufficient Privileges...
+    """
+
+def test_group_in_group():
+    """
+    We will have a group inside a group you manage.
+    Not clear if you should expect to manage people in a subgroup or not.
+    So far functionality has been to allow editing subgroup users so will test and keep that
+
+        >>> notingroup = api.user.create(username='notingroup',email="me2@me.com", properties=dict(fullname="Not in group"))
+        >>> mylogin = api.user.create(username='mylogin',email="me@me.com", properties=dict(fullname="Fred"))
+        >>> api.group.add_user(groupname="staff", user=mylogin)
+
+        >>> superstaff = api.group.create(groupname="superstaff")
+        >>> api.group.add_user(groupname="superstaff", user=notingroup)
+        >>> layer['portal'].portal_groups.addPrincipalToGroup('superstaff', 'staff') # api.group.add_user(groupname="staff", username="superstaff")
         True
+        >>> transaction.commit()
+        >>> b = get_browser(layer, 'form/signup/@@user_search_view', approval_group="staff")
+        >>> url = layer['portal'].absolute_url() + '/form/signup'
+
+    If we look at staff group we shouldn't see the superstaff or its users
+        >>> b.open("{}/@@user_search_view?user-groups=staff".format(url))
+        >>> 'notingroup' in b.contents
+        True
+
+        >>> b.open("{}/@@user_search_view".format(url))
+        >>> 'notingroup' in b.contents
+        True
+    
+    Ensure we view profile of users we don't manage
+        >>> url = layer['portal'].absolute_url() + '/form/signup'
+        >>> b.open("{}/user_profile_view?userid={}".format(url, 'notingroup'))
+        >>> print b.contents
+        <...
+        ...Not in group...
+
+    or edit
+        >>> b.open("{}/user_edit_view?userid={}".format(url, 'notingroup'))
+        >>> print b.contents
+        <...
+        ...Not in group...
+
+    or deactivate
+        >>> b.open("{}/user_profile_view?userid={}".format(url, 'notingroup'))
+        >>> b.getControl("Deactivate").click()
+        >>> print b.contents
+        <...
+        ...Not in group...
+
+
     """
 
 def test_set_group_manager(): #TODO: actually test it changes who can manage a group
