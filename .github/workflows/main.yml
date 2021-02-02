@@ -10,8 +10,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        fail-fast: false
         python-version: ['2.7']
         plone-version: 
           - '4.1'
