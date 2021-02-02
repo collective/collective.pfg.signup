@@ -5,6 +5,7 @@ collective.pfg.signup
 
 [![Coverage Status](https://coveralls.io/repos/github/collective/collective.pfg.signup/badge.svg?branch=fix_userid_username)](https://coveralls.io/github/collective/collective.pfg.signup?branch=fix_userid_username)
 
+[![](http://github-actions.40ants.com/collective/collective.pfg.signup/matrix.svg)](https://github.com/collective/collective.pfg.signup)
 
 .. contents::
 
